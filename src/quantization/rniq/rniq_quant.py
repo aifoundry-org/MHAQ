@@ -1,4 +1,5 @@
 import lightning.pytorch as pl
+import torch.nn.functional as F
 import torch
 
 from src.quantization.abc.abc_quant import BaseQuant
@@ -9,6 +10,7 @@ from src.quantization.rniq.utils.model_helper import ModelHelper
 from src.quantization.rniq.rniq_loss import PotentialLoss
 from src.quantization.rniq.utils import model_stats
 from src.aux.qutils import attrsetter, is_biased
+from src.aux.loss.hellinger import HellingerLoss
 
 from torch import nn
 from copy import deepcopy
@@ -24,19 +26,27 @@ class RNIQQuant(BaseQuant):
         }
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
+        tmodel = deepcopy(lmodel).eval()
         if in_place:
             qmodel = lmodel
         else:
             qmodel = deepcopy(lmodel)
 
         layer_names, layer_types = zip(
-            *[(n, type(m)) for n, m in qmodel.named_modules()])
+            *[(n, type(m)) for n, m in qmodel.model.named_modules()])
 
         # The part where original LModule structure gets changed
         qmodel._noise_ratio = torch.tensor(1.)
         qmodel.qscheme = self.qscheme
+        qmodel.tmodel = tmodel.requires_grad_(False)
+        qmodel.tmodel = tmodel
         qmodel.wrapped_criterion = PotentialLoss(
-            qmodel.criterion,
+            # torch.nn.KLDivLoss(),
+            # torch.nn.MSELoss(),
+            torch.nn.L1Loss(),
+            # torch.nn.CrossEntropyLoss(),
+            # HellingerLoss(),
+            # qmodel.criterion,
             alpha=(1, 1, 1),
             # alpha=self.alpha,
             lmin=0,
@@ -58,11 +68,14 @@ class RNIQQuant(BaseQuant):
         qmodel.validation_step = RNIQQuant.noisy_validation_step.__get__(
             qmodel, type(qmodel)
         )
+        qmodel.test_step = RNIQQuant.noisy_test_step.__get__(
+            qmodel, type(qmodel)
+        )
 
         # Replacing layers directly
-        qlayers = self._get_layers(lmodel, exclude_layers=self.excluded_layers)
+        qlayers = self._get_layers(lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
-            module = attrgetter(layer)(lmodel)
+            module = attrgetter(layer)(lmodel.model)
             preceding_layer_type = layer_types[layer_names.index(layer) - 1]
             if issubclass(preceding_layer_type, nn.ReLU):
                 qmodule = self._quantize_module(
@@ -71,16 +84,16 @@ class RNIQQuant(BaseQuant):
                 qmodule = self._quantize_module(
                     module, signed_Activations=True)
 
-            attrsetter(layer)(qmodel, qmodule)
+            attrsetter(layer)(qmodel.model, qmodule)
 
         return qmodel
     
     @staticmethod
     def noise_ratio(self, x=None):
-        if x:
+        if x != None:
             for module in self.modules():
                 if hasattr(module, "_noise_ratio"):
-                    module._noise_ratio.data = torch.Tensor(x)
+                    module._noise_ratio.data = torch.tensor(x)
         return self._noise_ratio
 
     @staticmethod  # yes, it's a static method with self argument
@@ -90,9 +103,14 @@ class RNIQQuant(BaseQuant):
 
     @staticmethod
     def noisy_training_step(self, batch, batch_idx):
+        self.tmodel.eval()
         inputs, targets = batch
+        targets_ = self.tmodel(inputs)
         outputs = RNIQQuant.noisy_step(self, inputs)
-        loss = self.wrapped_criterion(outputs, targets)
+        loss = self.wrapped_criterion(outputs, targets_)
+        # loss = self.criterion(outputs, targets)
+        
+        self.log("Loss/FP loss", F.cross_entropy(targets_, targets))
         self.log("Loss/Train loss", loss, prog_bar=True)
         self.log("Loss/Base train loss",
                  self.wrapped_criterion.base_loss, prog_bar=True)
@@ -107,11 +125,15 @@ class RNIQQuant(BaseQuant):
     @staticmethod
     def noisy_validation_step(self, val_batch, val_index):
         inputs, targets = val_batch
+
+        # targets = self.tmodel(inputs)
+        # self.noise_ratio(0.0)
         outputs = RNIQQuant.noisy_step(self, inputs)
 
-        val_loss = self.wrapped_criterion(outputs, targets)
+        val_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
             metric_value = metric(outputs[0], targets)
+            # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
 
         # Not very optimal approach. Cycling through model two times..
@@ -119,6 +141,19 @@ class RNIQQuant(BaseQuant):
         self.log("Mean activations bit width", model_stats.get_activations_bit_width_mean(self.model), prog_bar=False)
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
+    
+    @staticmethod
+    def noisy_test_step(self, test_batch, test_index):
+        inputs, targets = test_batch
+        # self.noise_ratio(0.0)
+        outputs = RNIQQuant.noisy_step(self, inputs)
+        
+        test_loss = self.criterion(outputs[0], targets)
+        for name, metric in self.metrics:
+            metric_value = metric(outputs[0], targets)
+            self.log(f"{name}", metric_value, prog_bar=False)
+        
+        self.log("test_loss", test_loss, prog_bar=True) 
 
     def _init_config(self):
         if self.config:

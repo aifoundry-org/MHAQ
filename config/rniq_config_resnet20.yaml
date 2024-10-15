@@ -9,13 +9,14 @@ training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
-  max_epochs: 500
+  max_epochs: 700
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
         name: resnet20-rniq
+        note: "Testing MAE loss with soft probs for tinputs and targets with linear noise decrease"
  
   callbacks:
     ModelCheckpoint:
@@ -30,8 +31,8 @@ training:
 
 data:
   dataset_name: CIFAR10
-  batch_size: 4000
-  num_workers: 20
+  batch_size: 3800
+  num_workers: 10
 
 
 quantization:
@@ -40,5 +41,5 @@ quantization:
   act_bit: 21
   weight_bit: 2
   excluded_layers:
-    - 'model.module.linear'
-    - 'model.module.conv1'
+    - 'module.linear'
+    - 'module.conv1'

@@ -26,11 +26,11 @@ data.num_workers = config.data.num_workers
 model = composer.compose()
 qmodel = quantizer.quantize(model, in_place=True)
 
-# Test model befor quantization
-trainer.test(qmodel, datamodule=data)
+# Test model before quantization
+trainer.test(model, datamodule=data)
 
 # Finetune model
 trainer.fit(qmodel, datamodule=data)
 
 # Test model after quantization
-trainer.test(model, datamodule=data)
+trainer.test(qmodel, datamodule=data)
