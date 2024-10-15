@@ -20,6 +20,7 @@ class WandbLogger(pl_loggers.WandbLogger):
         experiment: Any | None = None,
         prefix: str = "",
         checkpoint_name: str | None = None,
+        note: str | None = None,
         **kwargs: Any
     ) -> None:
         version = (
@@ -45,3 +46,5 @@ class WandbLogger(pl_loggers.WandbLogger):
             checkpoint_name,
             **kwargs
         )
+        if note:
+            self.experiment.notes = note

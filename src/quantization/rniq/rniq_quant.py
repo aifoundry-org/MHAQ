@@ -41,8 +41,11 @@ class RNIQQuant(BaseQuant):
         qmodel.tmodel = tmodel.requires_grad_(False)
         qmodel.tmodel = tmodel
         qmodel.wrapped_criterion = PotentialLoss(
+            # torch.nn.KLDivLoss(),
             # torch.nn.MSELoss(),
-            HellingerLoss(),
+            torch.nn.L1Loss(),
+            # torch.nn.CrossEntropyLoss(),
+            # HellingerLoss(),
             # qmodel.criterion,
             alpha=(1, 1, 1),
             # alpha=self.alpha,
