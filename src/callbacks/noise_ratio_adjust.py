@@ -11,10 +11,12 @@ logger = logging.getLogger("lightning.pytorch")
 class RandNoiseScale(Callback):
     def __init__(self, reduce_scale=2) -> None:
         self.q_loss = 0
+        self.noise_ratio = None
         super().__init__()
 
 
     def on_fit_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        self.noise_ratio = pl_module._noise_ratio
         return super().on_fit_start(trainer, pl_module)
 
 
@@ -28,10 +30,17 @@ class RandNoiseScale(Callback):
 
 
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        scale = 1.0 if self.q_loss > 1e-3 else 0.985
+        # scale = 1.0 if self.q_loss > 1e-3 else 0.985
+        # scale = 1.0 if self.q_loss > 1e-3 else 0.95
+        if self.noise_ratio > 0:
+            summand = 0 if self.q_loss > 1e-3  else 0.01
 
-        pl_module._noise_ratio.data.mul_(scale)
-        pl_module.noise_ratio(pl_module._noise_ratio)
+            # self.noise_ratio.data.mul_(scale)
+            self.noise_ratio.data.sub_(summand)
+            # pl_module._noise_ratio.data.mul_(scale)
+            
+            # pl_module.noise_ratio(pl_module._noise_ratio)
+            pl_module.noise_ratio(self.noise_ratio)
         pl_module.log("RNoise ratio", pl_module._noise_ratio, prog_bar=True)
 
         self.q_loss = 0
