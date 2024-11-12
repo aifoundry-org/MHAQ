@@ -13,7 +13,7 @@ from src.training.trainer import Trainer
 
 torch.set_float32_matmul_precision('high')
 
-config = load_and_validate_config("config/rniq_config_resnet20.yaml")
+config = load_and_validate_config("config/rniq_config_resnet20_vis.yaml")
 composer = ModelComposer(config=config)
 quantizer = Quantizer(config=config)()
 trainer = Trainer(config=config)
@@ -25,12 +25,10 @@ data.num_workers = config.data.num_workers
 
 model = composer.compose()
 qmodel = quantizer.quantize(model, in_place=True)
+ckpt = torch.load("")["state_dict"]
+qmodel.load_state_dict(ckpt, strict=False)
 
-# Test model before quantization
-trainer.test(model, datamodule=data)
-
-# Finetune model
-trainer.fit(qmodel, datamodule=data)
+trainer.validate(qmodel, datamodule=data)
 
 # Test model after quantization
-trainer.test(qmodel, datamodule=data)
+# trainer.test(qmodel, datamodule=data)

@@ -50,6 +50,7 @@ class NoisyConv2d(nn.Conv2d):
                 requires_grad=True,
             )
         self._noise_ratio = torch.nn.Parameter(torch.Tensor([1]), requires_grad=False)
+        # self._noise_ratio = torch.Tensor([1])
         self.Q = Quantizer(torch.exp2(self.log_wght_s), 0, -inf, inf)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:

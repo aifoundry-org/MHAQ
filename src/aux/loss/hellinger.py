@@ -6,7 +6,8 @@ class HellingerLoss(_Loss):
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
         super().__init__(size_average, reduce, reduction)
     
-    def _distance(self, p, q):
+    @staticmethod
+    def _distance(p, q):
         # p = torch.clamp(p, min=1e-10)
         # q = torch.clamp(q, min=1e-10)
         
@@ -17,4 +18,4 @@ class HellingerLoss(_Loss):
         
     
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return torch.mean(self._distance(input, target))
+        return torch.mean(HellingerLoss._distance(input, target))
