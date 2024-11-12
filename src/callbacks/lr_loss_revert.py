@@ -59,14 +59,16 @@ class ReduceLrOnOutlier(Callback):
             trainer.optimizers[0].load_state_dict(self.optimizer_state)
             self.change_lr(pl_module, trainer, pl_module.lr / self.LR_scale)
         else:
+            # exponent growth
+            # self.epoch_mean_loss.append(self.batch_loss)
+            # scale = 1.05 if self.q_loss > 1e-3 else 0.995
+            # self.change_lr(pl_module, trainer, pl_module.lr * scale)
+            
+            # Moving parabolic growth
             self.epoch_mean_loss.append(self.batch_loss)
             eta = self.q_loss * 1e-4
             hscale = 1 + (eta * (self.lr_lim - pl_module.lr) / pl_module.lr)
-            # hscale = 1 / (eta * (self.lr_lim - pl_module.lr) / pl_module.lr)
             scale = hscale if self.q_loss > 1e-3 else 0.995
-            # scale = 1.05 if self.q_loss > 1e-3 else 0.995
-            
-
             self.change_lr(pl_module, trainer, pl_module.lr * scale)
 
         self.batch_loss = 0

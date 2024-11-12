@@ -39,7 +39,6 @@ class RNIQQuant(BaseQuant):
         qmodel._noise_ratio = torch.tensor(1.)
         qmodel.qscheme = self.qscheme
         qmodel.tmodel = tmodel.requires_grad_(False)
-        qmodel.tmodel = tmodel
         qmodel.wrapped_criterion = PotentialLoss(
             # torch.nn.KLDivLoss(),
             # torch.nn.MSELoss(),
@@ -108,6 +107,7 @@ class RNIQQuant(BaseQuant):
         targets_ = self.tmodel(inputs)
         outputs = RNIQQuant.noisy_step(self, inputs)
         loss = self.wrapped_criterion(outputs, targets_)
+        # loss = self.wrapped_criterion(outputs, targets)
         # loss = self.criterion(outputs, targets)
         
         self.log("Loss/FP loss", F.cross_entropy(targets_, targets))
