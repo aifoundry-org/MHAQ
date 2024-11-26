@@ -11,7 +11,7 @@ from src.quantization.rniq.rniq_loss import PotentialLoss
 from src.quantization.rniq.utils import model_stats
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
-from src.aux.loss.symm_ce_loss import SymmetricalCELoss, SymmetricalCrossEntropyLoss
+from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
 
 from torch import nn
 from copy import deepcopy
