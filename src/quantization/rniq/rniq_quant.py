@@ -11,6 +11,7 @@ from src.quantization.rniq.rniq_loss import PotentialLoss
 from src.quantization.rniq.utils import model_stats
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
+from src.aux.loss.symm_ce_loss import SymmetricalCELoss, SymmetricalCrossEntropyLoss
 
 from torch import nn
 from copy import deepcopy
@@ -42,7 +43,9 @@ class RNIQQuant(BaseQuant):
         qmodel.wrapped_criterion = PotentialLoss(
             # torch.nn.KLDivLoss(),
             # torch.nn.MSELoss(),
-            torch.nn.L1Loss(),
+            # SymmetricalCELoss(),
+            SymmetricalCrossEntropyLoss(),
+            # torch.nn.L1Loss(),
             # torch.nn.CrossEntropyLoss(),
             # HellingerLoss(),
             # qmodel.criterion,
