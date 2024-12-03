@@ -98,5 +98,5 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 | Model     | Dataset  | Method | QW | QA | Best Top-1 |
 |-----------|----------|--------|----|----|------------|
 | Resnet-20 | CIFAR-10 | FP     | -  | -  | 91.7%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 2  | -  | 91.72%      |
+| Resnet-20 | CIFAR-10 | RNIQ   | 2  | -  | 91.85%      |
 | Resnet-20 | CIFAR-10 | [link](https://github.com/linkinpark213/quantization-networks-cifar10/tree/master)   | 2  | -  | 91.1%      |

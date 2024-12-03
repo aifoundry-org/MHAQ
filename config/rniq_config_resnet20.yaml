@@ -39,6 +39,7 @@ quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 21
+  distillation: True
   weight_bit: 2
   excluded_layers:
     - 'module.linear'

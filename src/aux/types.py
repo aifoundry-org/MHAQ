@@ -12,4 +12,7 @@ class MType(Enum):
 class QScheme(Enum):
     PER_TENSOR = 0
     PER_CHANNEL = 1
+
+class QMethod(Enum):
+    RNIQ = 0
     
