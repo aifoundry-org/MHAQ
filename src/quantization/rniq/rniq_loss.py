@@ -60,8 +60,8 @@ class PotentialLoss(nn.Module):
         out_4 = output[4]  # log_w
 
         # self.base_loss = self.criterion(out_0, target.softmax(-1))
-        self.base_loss = self.criterion(out_0.softmax(-1), target.softmax(-1))
-        # self.base_loss = self.criterion(out_0, target)
+        # self.base_loss = self.criterion(out_0.softmax(-1), target.softmax(-1))
+        self.base_loss = self.criterion(out_0, target)
         loss = self.base_loss
 
         z = torch.tensor(0)
