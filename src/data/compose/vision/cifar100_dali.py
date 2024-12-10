@@ -2,7 +2,7 @@ import os
 import torch
 import pytorch_lightning as pl
 from lightning import pytorch as pl
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 from torch.utils.data import random_split
 from nvidia.dali.pipeline import Pipeline
 import nvidia.dali.fn as fn
@@ -12,7 +12,7 @@ from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPoli
 # Function to save CIFAR10 dataset to disk
 
 
-def save_cifar10_to_disk(dataset, root_dir):
+def save_cifar100_to_disk(dataset, root_dir):
     from PIL import Image
 
     if not os.path.exists(root_dir):
@@ -58,8 +58,8 @@ def create_dali_pipeline(batch_size, num_threads, device_id, data_dir, crop, siz
         images = fn.crop_mirror_normalize(
             images,
             dtype=types.FLOAT,
-            mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-            std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
+            mean=[0.50705882 * 255, 0.48666667 * 255, 0.44078431 * 255],
+            std=[0.26745098 * 255, 0.25568627 * 255, 0.27607843 * 255],
             output_layout="CHW",
         )
         pipe.set_outputs(images, labels)
@@ -96,22 +96,22 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.device_id = device_id  # GPU device ID
-        self.num_classes = 10
+        self.num_classes = 100
 
     def prepare_data(self):
-        # Download CIFAR10 dataset
-        CIFAR10(self.data_dir, train=True, download=True)
-        CIFAR10(self.data_dir, train=False, download=True)
+        # Download CIFAR100 dataset
+        CIFAR100(self.data_dir, train=True, download=True)
+        CIFAR100(self.data_dir, train=False, download=True)
 
         # Prepare data directories
-        train_dir = os.path.join(self.data_dir, "cifar10", "train")
-        val_dir = os.path.join(self.data_dir, "cifar10",  "val")
-        test_dir = os.path.join(self.data_dir, "cifar10", "test")
+        train_dir = os.path.join(self.data_dir, "cifar100", "train")
+        val_dir = os.path.join(self.data_dir, "cifar100", "val")
+        test_dir = os.path.join(self.data_dir, "cifar100", "test")
 
         # Check if data is already prepared
         if not os.path.exists(train_dir) or not os.path.exists(val_dir):
             # Load dataset
-            full_train = CIFAR10(self.data_dir, train=True, download=False)
+            full_train = CIFAR100(self.data_dir, train=True, download=False)
             # Split into train and validation sets
             train_size = int(0.9 * len(full_train))
             val_size = len(full_train) - train_size
@@ -121,15 +121,15 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
                 generator=torch.Generator().manual_seed(42),
             )
             # Save datasets to disk
-            save_cifar10_to_disk(cifar_train, train_dir)
-            save_cifar10_to_disk(cifar_val, val_dir)
+            save_cifar100_to_disk(cifar_train, train_dir)
+            save_cifar100_to_disk(cifar_val, val_dir)
             print("Training and validation data saved to disk.")
         else:
             print("Training and validation data already prepared.")
 
         if not os.path.exists(test_dir):
-            cifar_test = CIFAR10(self.data_dir, train=False, download=False)
-            save_cifar10_to_disk(cifar_test, test_dir)
+            cifar_test = CIFAR100(self.data_dir, train=False, download=False)
+            save_cifar100_to_disk(cifar_test, test_dir)
             print("Test data saved to disk.")
         else:
             print("Test data already prepared.")
@@ -139,7 +139,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_threads=self.num_workers,
             device_id=self.device_id,
-            data_dir=os.path.join(self.data_dir, "cifar10", "val"),
+            data_dir=os.path.join(self.data_dir, "cifar100", "val"),
             crop=(32, 32),
             size=32,
             is_training=False,
@@ -151,7 +151,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_threads=self.num_workers,
                 device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "cifar10", "train"),
+                data_dir=os.path.join(self.data_dir, "cifar100", "train"),
                 crop=(32, 32),
                 size=32,
                 is_training=True,
@@ -163,7 +163,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_threads=self.num_workers,
                 device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "cifar10", "test"),
+                data_dir=os.path.join(self.data_dir, "cifar100", "test"),
                 crop=(32, 32),
                 size=32,
                 is_training=False,
