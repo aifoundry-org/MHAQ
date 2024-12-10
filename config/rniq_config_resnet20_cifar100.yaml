@@ -15,7 +15,7 @@ training:
   loggers:
     WandbLogger:
       params:
-        name: resnet20-rniq
+        name: resnet20_cifar100-rniq
         note: "CE loss"
  
   callbacks:
@@ -42,5 +42,5 @@ quantization:
   distillation: True
   weight_bit: 2
   excluded_layers:
-    - 'module.linear'
-    - 'module.conv1'
+    - 'features.init_block.conv'
+    - 'output'
