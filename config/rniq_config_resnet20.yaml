@@ -1,6 +1,6 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar10
+  name: resnet20_cifar10_new
   params:
     pretrained: True
     num_classes: 10
