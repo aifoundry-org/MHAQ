@@ -58,8 +58,11 @@ class NoisyLinear(nn.Linear):
     
     def extra_repr(self) -> str:
         bias = is_biased(self)
-        log_wght_s = self.log_wght_s.item()
-        noise_ratio = self._noise_ratio.item()
+        # log_wght_s = self.log_wght_s.item()
+        # noise_ratio = self._noise_ratio.item()
+
+        log_wght_s = self.log_wght_s
+        noise_ratio = self._noise_ratio
         
         return (
             f"in_features={self.in_features}, out_features={self.out_features}, bias={bias},\n"

@@ -143,6 +143,9 @@ def resnet20_cifar10(num_classes=10, pretrained=False):
 def resnet20_cifar100(num_classes=100, pretrained=False):
     return get_model("resnet20_cifar100", pretrained=pretrained)
 
+def resnet20_cifar10_new(num_classes=10, pretrained=False):
+    return get_model("resnet20_cifar10", pretrained=pretrained)
+
 
 def resnet32(num_classes=10, pretrained=False):
     if not pretrained:

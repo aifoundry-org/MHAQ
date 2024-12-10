@@ -69,8 +69,11 @@ class NoisyConv2d(nn.Conv2d):
 
     def extra_repr(self) -> str:
         bias = is_biased(self)
-        log_wght_s = self.log_wght_s.item()
-        noise_ratio = self._noise_ratio.item()
+        # log_wght_s = self.log_wght_s.item()
+        # noise_ratio = self._noise_ratio.item()
+
+        log_wght_s = self.log_wght_s
+        noise_ratio = self._noise_ratio
         
         return (
             f"in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size},\n"
