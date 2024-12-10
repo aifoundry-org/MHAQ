@@ -23,6 +23,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 from collections import OrderedDict
+from pytorchcv.model_provider import get_model
+from src.models import model_store
 
 
 weights = {
@@ -36,7 +38,7 @@ weights = {
 
 __all__ = [
     'ResNet', 
-    'resnet20', 
+    'resnet20_cifar10', 
     'resnet32', 
     'resnet44', 
     'resnet56', 
@@ -129,7 +131,7 @@ class ResNet(nn.Module):
         return out
 
 
-def resnet20(num_classes=10, pretrained=False):
+def resnet20_cifar10(num_classes=10, pretrained=False):
     if not pretrained:
         return ResNet(BasicBlock, [3, 3, 3], num_classes)
     else:
@@ -137,6 +139,9 @@ def resnet20(num_classes=10, pretrained=False):
         model = nn.Sequential(OrderedDict([('module', model)]))
         model.load_state_dict(torch.hub.load_state_dict_from_url(weights['resnet20'])['state_dict'])
         return model
+
+def resnet20_cifar100(num_classes=100, pretrained=False):
+    return get_model("resnet20_cifar100", pretrained=pretrained)
 
 
 def resnet32(num_classes=10, pretrained=False):

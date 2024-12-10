@@ -10,7 +10,7 @@ from src.aux.types import MType
 from src.training.trainer import Trainer
 from src.quantization.dummy.dummy_quant import DummyQuant
 from src.models.compose.composer import ModelComposer
-from src.data import CIFAR10DataModule
+from src.data.compose.vision import CIFAR10
 
 
 # Model composer section
@@ -33,7 +33,7 @@ trainer = Trainer(max_epochs=20,
                   callbacks=callbacks)
 
 # Dataset section
-data = CIFAR10DataModule()
+data = CIFAR10()
 data.batch_size_train = 2000
 data.num_workers = 10
 
