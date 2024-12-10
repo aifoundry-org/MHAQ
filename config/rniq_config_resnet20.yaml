@@ -1,9 +1,9 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar100
+  name: resnet20_cifar10
   params:
     pretrained: True
-    num_classes: 100
+    num_classes: 10
 
 training:
   criterion: CrossEntropyLoss
@@ -30,7 +30,7 @@ training:
         reduce_scale: 2
 
 data:
-  dataset_name: CIFAR100
+  dataset_name: CIFAR10
   batch_size: 8000
   num_workers: 10
 

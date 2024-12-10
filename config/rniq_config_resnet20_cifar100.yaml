@@ -30,7 +30,7 @@ training:
         reduce_scale: 2
 
 data:
-  dataset_name: CIFAR100
+  dataset_name: CIFAR100_DALI
   batch_size: 8000
   num_workers: 10
 
