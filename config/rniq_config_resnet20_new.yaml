@@ -9,7 +9,7 @@ training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
-  max_epochs: 700
+  max_epochs: 1500
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
@@ -30,9 +30,9 @@ training:
         reduce_scale: 2
 
 data:
-  dataset_name: CIFAR10
+  dataset_name: CIFAR10_DALI
   batch_size: 8000
-  num_workers: 10
+  num_workers: 6
 
 
 quantization:
@@ -42,5 +42,5 @@ quantization:
   distillation: True
   weight_bit: 2
   excluded_layers:
-    - 'module.linear'
-    - 'module.conv1'
+    - 'features.init_block.conv'
+    - 'output'

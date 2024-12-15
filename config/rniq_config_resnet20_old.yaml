@@ -1,21 +1,21 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar100
+  name: resnet20_cifar10
   params:
     pretrained: True
-    num_classes: 100
+    num_classes: 10
 
 training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
-  max_epochs: 1500
+  max_epochs: 400
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
-        name: resnet20_cifar100-rniq
+        name: resnet20-rniq
         note: "CE loss"
  
   callbacks:
@@ -30,17 +30,18 @@ training:
         reduce_scale: 2
 
 data:
-  dataset_name: CIFAR100_DALI
+  dataset_name: CIFAR10_DALI
   batch_size: 8000
-  num_workers: 10
+  num_workers: 6
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 2
-  weight_bit: 2
+  act_bit: 21
   distillation: True
+  distillation_loss: Cross-Entropy
+  weight_bit: 2
   excluded_layers:
-    - 'features.init_block.conv'
-    - 'output'
+    - 'module.linear'
+    - 'module.conv1'
