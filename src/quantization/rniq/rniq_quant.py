@@ -13,6 +13,9 @@ from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
 from src.aux.loss.distill_ce import CrossEntropyLoss
+from src.aux.loss.symm_kl_loss import SymmetricalKL
+from src.aux.loss.kl_loss import KL
+from src.aux.loss.jsdloss import JSDLoss
 
 from torch import nn
 from copy import deepcopy
@@ -39,9 +42,13 @@ class RNIQQuant(BaseQuant):
             elif config_loss == "L2":
                 return torch.nn.MSELoss()
             elif config_loss == "KL":
-                return torch.nn.KLDivLoss()
+                return KL()
             elif config_loss == "Hellinger":
                 return HellingerLoss()
+            elif config_loss == "Symmetrical KL":
+                return SymmetricalKL()
+            elif config_loss == "JSD":
+                return JSDLoss()
             else:
                 raise NotImplementedError("Loss type are invalid! \
                                           Valid options are: \
@@ -121,7 +128,7 @@ class RNIQQuant(BaseQuant):
         if x != None:
             for module in self.modules():
                 if hasattr(module, "_noise_ratio"):
-                    module._noise_ratio.data = torch.tensor(x)
+                    module._noise_ratio.data = x.clone().detach()
         return self._noise_ratio
 
     @staticmethod  # yes, it's a static method with self argument

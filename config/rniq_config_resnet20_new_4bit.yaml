@@ -8,7 +8,7 @@ model:
 training:
   criterion: CrossEntropyLoss
   optimizer: Adam
-  learning_rate:
+  learning_rate: 0.001
   max_epochs: 700
   val_every_n_epochs: 2
   log_every_n_steps: 10
@@ -16,7 +16,6 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-
         note: "Sym KL loss"
  
   callbacks:
@@ -41,7 +40,7 @@ quantization:
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 21
   distillation: True
-  weight_bit: 2
+  weight_bit: 4
   distillation_loss: Symmetrical KL
   excluded_layers:
     - 'features.init_block.conv'
