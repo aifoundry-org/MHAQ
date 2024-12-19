@@ -1,5 +1,8 @@
 from enum import Enum
 
+class DType(Enum):
+    VISION_CLS = 1
+
 class MType(Enum):
     # Vision-based model types
     VISION_CLS = 1

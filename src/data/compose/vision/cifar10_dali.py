@@ -10,12 +10,14 @@ import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
 
 # Function to save CIFAR10 dataset to disk
+
+
 def save_cifar10_to_disk(dataset, root_dir):
     from PIL import Image
 
     if not os.path.exists(root_dir):
         os.makedirs(root_dir)
-    
+
     # Retrieve classes from the dataset or its underlying dataset
     def get_classes(ds):
         while isinstance(ds, torch.utils.data.Subset):
@@ -32,8 +34,11 @@ def save_cifar10_to_disk(dataset, root_dir):
         img.save(img_path)
 
 # DALI Pipeline for training and validation
+
+
 def create_dali_pipeline(batch_size, num_threads, device_id, data_dir, crop, size, shard_id=0, num_shards=1, is_training=True):
-    pipe = Pipeline(batch_size=batch_size, num_threads=num_threads, device_id=device_id, seed=12, prefetch_queue_depth=5)
+    pipe = Pipeline(batch_size=batch_size, num_threads=num_threads,
+                    device_id=device_id, seed=12, prefetch_queue_depth=5)
     with pipe:
         jpegs, labels = fn.readers.file(
             file_root=data_dir,
@@ -43,7 +48,8 @@ def create_dali_pipeline(batch_size, num_threads, device_id, data_dir, crop, siz
             pad_last_batch=True,
             name="Reader"
         )
-        images = fn.decoders.image(jpegs, device="mixed", output_type=types.RGB)
+        images = fn.decoders.image(
+            jpegs, device="mixed", output_type=types.RGB)
         if is_training:
             images = fn.random_resized_crop(images, size=crop)
             images = fn.flip(images, horizontal=1)
@@ -60,6 +66,8 @@ def create_dali_pipeline(batch_size, num_threads, device_id, data_dir, crop, siz
     return pipe
 
 # Wrapper to yield (inputs, targets) tuples
+
+
 class DALIWrapper:
     def __init__(self, dali_iterator):
         self.dali_iterator = dali_iterator
@@ -75,8 +83,14 @@ class DALIWrapper:
         self.dali_iterator.reset()
 
 # Data Module using DALI
+
+
 class CIFAR10DALIDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir="./data", batch_size=32, num_workers=4, device_id=0):
+    def __init__(self,
+                 data_dir="./data",
+                 batch_size=32,
+                 num_workers=4,
+                 device_id=0):
         super().__init__()  # Ensure you call the parent class constructor
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -90,9 +104,9 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
         CIFAR10(self.data_dir, train=False, download=True)
 
         # Prepare data directories
-        train_dir = os.path.join(self.data_dir, "train")
-        val_dir = os.path.join(self.data_dir, "val")
-        test_dir = os.path.join(self.data_dir, "test")
+        train_dir = os.path.join(self.data_dir, "cifar10", "train")
+        val_dir = os.path.join(self.data_dir, "cifar10",  "val")
+        test_dir = os.path.join(self.data_dir, "cifar10", "test")
 
         # Check if data is already prepared
         if not os.path.exists(train_dir) or not os.path.exists(val_dir):
@@ -122,14 +136,14 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         self.val_pipeline = create_dali_pipeline(
-                batch_size=self.batch_size,
-                num_threads=self.num_workers,
-                device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "val"),
-                crop=(32, 32),
-                size=32,
-                is_training=False,
-            )
+            batch_size=self.batch_size,
+            num_threads=self.num_workers,
+            device_id=self.device_id,
+            data_dir=os.path.join(self.data_dir, "cifar10", "val"),
+            crop=(32, 32),
+            size=32,
+            is_training=False,
+        )
         self.val_pipeline.build()
 
         if stage == "fit" or stage is None:
@@ -137,7 +151,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_threads=self.num_workers,
                 device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "train"),
+                data_dir=os.path.join(self.data_dir, "cifar10", "train"),
                 crop=(32, 32),
                 size=32,
                 is_training=True,
@@ -149,7 +163,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 num_threads=self.num_workers,
                 device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "test"),
+                data_dir=os.path.join(self.data_dir, "cifar10", "test"),
                 crop=(32, 32),
                 size=32,
                 is_training=False,

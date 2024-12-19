@@ -9,11 +9,15 @@ from torch.utils.data import random_split, DataLoader
 
 
 class CIFAR10DataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str = "./data") -> None:
+    def __init__(self,
+                 data_dir: str = "./data",
+                 batch_size=1000,
+                 num_workers=5) -> None:
+
         super().__init__()
         self.data_dir = data_dir
-        self.batch_size = 1000
-        self.num_workers = 20
+        self.batch_size = batch_size
+        self.num_workers = num_workers
 
         self.transform_train = transforms.Compose(
             [
