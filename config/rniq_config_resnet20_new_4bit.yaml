@@ -40,7 +40,7 @@ quantization:
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 21
   distillation: True
-  weight_bit: 2
+  weight_bit: 4
   distillation_loss: Symmetrical KL
   excluded_layers:
     - 'features.init_block.conv'
