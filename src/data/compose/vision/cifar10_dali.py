@@ -58,8 +58,8 @@ def create_dali_pipeline(batch_size, num_threads, device_id, data_dir, crop, siz
         images = fn.crop_mirror_normalize(
             images,
             dtype=types.FLOAT,
-            mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-            std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
+            mean=[0.4914 * 255, 0.4822 * 255, 0.4465 * 255], 
+            std=[0.247 * 255, 0.243 * 255, 0.261 * 255],
             output_layout="CHW",
         )
         pipe.set_outputs(images, labels)
