@@ -19,6 +19,12 @@ training:
         note: "Sym KL loss"
  
   callbacks:
+    NoiseEarlyStopping:
+      params:
+        monitor: Loss/Validation loss
+        mode: min
+        patience: 20
+        min_delta: 0.005
     ModelCheckpoint:
       params:
         filename: rniq_checkpoint_rsnt20
