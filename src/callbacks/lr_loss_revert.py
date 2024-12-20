@@ -11,7 +11,7 @@ logger = logging.getLogger("lightning.pytorch")
 
 
 class ReduceLrOnOutlier(Callback):
-    def __init__(self, reduce_scale=2, lr_lim=0.005) -> None:
+    def __init__(self, reduce_scale=2, lr_lim=0.0003) -> None:
         self.LR_scale = reduce_scale
         self.epoch_mean_loss = []
         self.batch_loss = 0
