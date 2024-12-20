@@ -22,6 +22,7 @@ def parse_args():
         help="Path to the configuration file (YAML).",
         default="config/rniq_config_resnet20_old.yaml"
     )
+    return parser.parse_args()
 
 
 def main():
