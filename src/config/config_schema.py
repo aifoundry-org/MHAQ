@@ -49,6 +49,7 @@ class DataConfig(BaseModel):
     batch_size: int
     num_workers: int
     augmentations: Optional[List[str]] = None
+    data_dir: Optional[str] = "./data"
 
 
 class ConfigSchema(BaseModel):

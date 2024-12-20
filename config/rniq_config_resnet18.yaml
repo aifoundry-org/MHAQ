@@ -36,9 +36,10 @@ training:
         reduce_scale: 2
 
 data:
-  dataset_name: Imagenet
-  batch_size: 1024
-  num_workers: 10
+  dataset_name: IMAGENET
+  data_dir: ./data/imagenet
+  batch_size: 900
+  num_workers: 8
 
 
 quantization:
