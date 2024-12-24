@@ -209,6 +209,9 @@ class RNIQQuant(BaseQuant):
         )
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
+        # idea is to modify val loss during the stage when model is not converged 
+        # to use this metric later for the chckpoint callback
+        self.log("Loss/ns_val_loss", val_loss * (1.5 * self.noise_ratio()), prog_bar=False) 
 
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):

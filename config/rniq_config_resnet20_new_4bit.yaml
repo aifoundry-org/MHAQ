@@ -9,6 +9,7 @@ training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
+  precision: 16
   max_epochs: 700
   val_every_n_epochs: 2
   log_every_n_steps: 10
@@ -27,7 +28,9 @@ training:
         min_delta: 0.005
     ModelCheckpoint:
       params:
-        filename: rniq_checkpoint_rsnt20
+        monitor: Loss/ns_val_loss
+        mode: min
+        filename: rniq_checkpoint-{epoch:02d}-"{Loss/Validation loss:.2f}"
     ReduceLrOnOutlier:
       params:
         reduce_scale: 8

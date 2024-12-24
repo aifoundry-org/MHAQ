@@ -23,7 +23,7 @@ training:
       params:
         monitor: Loss/Base train loss
         mode: min
-        patience: 1
+        patience: 10
         min_delta: 0.005
     ModelCheckpoint:
       params:
@@ -39,7 +39,7 @@ training:
 data:
   dataset_name: IMAGENET
   data_dir: ./data/imagenet
-  batch_size: 900
+  batch_size: 800
   num_workers: 8
 
 

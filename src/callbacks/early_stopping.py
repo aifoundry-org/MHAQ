@@ -3,6 +3,10 @@ from typing_extensions import override
 
 
 class NoiseEarlyStopping(EarlyStopping):
+    r"""Slightly modified version of EarlyStopping algorithm.
+    The idea is to enable stopping logic only after bit widths convergence.
+    For more info please refer to parent class.
+    """
     def __init__(
         self,
         monitor,
