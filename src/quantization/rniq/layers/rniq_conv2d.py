@@ -78,6 +78,6 @@ class NoisyConv2d(nn.Conv2d):
         return (
             f"in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size},\n"
             f"stride={self.stride}, padding={self.padding}, dilation={self.dilation},\n"
-            f"groups={self.groups}, bias={bias}, log_wght_s={log_wght_s},\n"
+            f"groups={self.groups}, bias={bias}, log_wght_s_mean={log_wght_s.mean()},\n"
             f"noise_ratio={noise_ratio}"
         )
