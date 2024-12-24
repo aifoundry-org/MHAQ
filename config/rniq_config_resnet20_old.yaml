@@ -25,6 +25,7 @@ training:
     ReduceLrOnOutlier:
       params:
         reduce_scale: 8
+        lr_lim: 0.005
     RandNoiseScale:
       params:
         reduce_scale: 2
