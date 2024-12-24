@@ -9,6 +9,7 @@ training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
+  precision: 16
   max_epochs: 700
   val_every_n_epochs: 2
   log_every_n_steps: 10
