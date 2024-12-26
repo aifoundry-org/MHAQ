@@ -23,7 +23,7 @@ training:
       params:
         monitor: Loss/Validation loss
         mode: min
-        patience: 20
+        patience: 40
         min_delta: 0.005
     ModelCheckpoint:
       params:
@@ -37,7 +37,7 @@ training:
 
 data:
   dataset_name: CIFAR100_DALI
-  batch_size: 8000
+  batch_size: 3000
   num_workers: 10
 
 
