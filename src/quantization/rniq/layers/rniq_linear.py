@@ -47,10 +47,12 @@ class NoisyLinear(nn.Linear):
         s = torch.exp2(self.log_wght_s)
         self.Q.scale = s
 
-        if self.training:
-            self.Q.rnoise_ratio = self._noise_ratio
-        else:
-            self.Q.rnoise_ratio = torch.tensor(0)
+        self.Q.rnoise_ratio = self._noise_ratio
+
+        # if self.training:
+        #     self.Q.rnoise_ratio = self._noise_ratio
+        # else:
+        #     self.Q.rnoise_ratio = torch.tensor(0)
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 

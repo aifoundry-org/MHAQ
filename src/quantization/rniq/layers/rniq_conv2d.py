@@ -57,11 +57,13 @@ class NoisyConv2d(nn.Conv2d):
         s = torch.exp2(self.log_wght_s)
         self.Q.scale = s
 
-        if self.training:
-            self.Q.rnoise_ratio.data = self._noise_ratio
-        else:
-            # self.Q.rnoise_ratio.data = self._noise_ratio
-            self.Q.rnoise_ratio.data = torch.tensor(0)
+        self.Q.rnoise_ratio.data = self._noise_ratio
+
+        # if self.training:
+        #     self.Q.rnoise_ratio.data = self._noise_ratio
+        # else:
+        #     # self.Q.rnoise_ratio.data = self._noise_ratio
+            # self.Q.rnoise_ratio.data = torch.tensor(0)
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 
