@@ -27,7 +27,9 @@ training:
         min_delta: 0.005
     ModelCheckpoint:
       params:
-        filename: rniq_checkpoint_rsnt20
+        monitor: Loss/ns_val_loss
+        mode: min
+        filename: rniq_checkpoint-{epoch:02d}-"{Loss/Validation loss:.2f}"
     ReduceLrOnOutlier:
       params:
         reduce_scale: 8
@@ -50,3 +52,7 @@ quantization:
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
+  calibration:
+    quantile: 0.999
+    act_bit: 12
+    weight_bit: 12

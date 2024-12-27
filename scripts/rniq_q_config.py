@@ -43,7 +43,7 @@ def main():
     trainer.test(model, datamodule=data)
     
     # Calibrating model initial weights and scales if defined in config
-    trainer.calibrate(qmodel, datamodule=data)
+    # trainer.calibrate(qmodel, datamodule=data)
 
     # Finetune model
     trainer.fit(qmodel, datamodule=data)

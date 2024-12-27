@@ -71,7 +71,7 @@ class Quantizer:
             qnoise = self._get_qnoise(value)
             rnoise = self._get_rnoise(value)
 
-        noise = self.scale * (
+        noise = (
             self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise)
         
 
@@ -91,13 +91,19 @@ class Quantizer:
         return quantized_value + self.zero_point
 
     def _get_qnoise(self, value: Tensor):
-        return torch.clamp(
-            torch.round(value / self.scale - self.zero_point),
+        q = torch.clamp(torch.round(value / self.scale - self.zero_point),
             min=self.min_val,
-            max=self.max_val,
-        ) - value
+            max=self.max_val)
+        dq = self.dequantize(q)
+        
+        return dq - value
+        # return torch.clamp(
+        #     torch.round(value / self.scale - self.zero_point),
+        #     min=self.min_val,
+        #     max=self.max_val,
+        # ) - value
 
     def _get_rnoise(self, value: Tensor):
-        return torch.randint(low=-1, high=0, size=value.shape, dtype=value.dtype, device=value.device).add(
+        return torch.randint(low=-1, high=1, size=value.shape, dtype=value.dtype, device=value.device).add(
             0.5
-        )
+        ) # high is exclusive
