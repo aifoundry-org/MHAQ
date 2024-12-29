@@ -21,12 +21,13 @@ class ModelHelper:
         # Helper to handle log_s and log_w_n_b collection
         def collect_log_weights(module):
             if module.log_wght_s.requires_grad:
+                # add 0.5 bit gap to prevent overflow
                 if qscheme == QScheme.PER_CHANNEL:
                     log_wght_s.append(module.log_wght_s.ravel())
-                    log_w_n_b.append(torch.log2(samax_(module.weight)))
+                    log_w_n_b.append(torch.log2(samax_(module.weight) + torch.exp2(module.log_wght_s.ravel() - 1)))
                 elif qscheme == QScheme.PER_TENSOR:
                     log_wght_s.append(module.log_wght_s)
-                    log_w_n_b.append(torch.log2(samax(module.weight)))
+                    log_w_n_b.append(torch.log2(samax(module.weight) + torch.exp2(module.log_wght_s.ravel() - 1)))
                     
 
         # Helper to handle log_act_q and log_act_s collection
