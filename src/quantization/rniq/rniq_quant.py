@@ -106,27 +106,21 @@ class RNIQQuant(BaseQuant):
         qmodel.test_step = RNIQQuant.noisy_test_step.__get__(
             qmodel, type(qmodel))
 
-        # Quantize weights
+        # Replacing layers directly
         qlayers = self._get_layers(
             lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
+            preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+            if issubclass(preceding_layer_type, nn.ReLU):
+                qmodule = self._quantize_module(
+                    module, signed_Activations=False)
+            else:
+                qmodule = self._quantize_module(
+                    module, signed_Activations=True)
 
-            qmodule = self._quantize_module_weights(module)                
-            
             attrsetter(layer)(qmodel.model, qmodule)
 
-
-        # Quantize activations
-        qlayers = {n: type(m) for n, m in lmodel.model.named_modules() if isinstance(m, nn.ReLU)}
-        for layer in qlayers.keys():
-            module = attrgetter(layer)(lmodel.model)
-
-            qmodule = self._get_quantization_sequence(
-                    module, signed_activations=False)                
-            
-            attrsetter(layer)(qmodel.model, qmodule)
-                    
         return qmodel
 
     @staticmethod
@@ -240,15 +234,7 @@ class RNIQQuant(BaseQuant):
             self.excluded_layers = self.quant_config.excluded_layers
             self.qscheme = self.quant_config.qscheme
 
-    def _quantize_module(self, module, signed_activations):
-        try:
-            qmodule = self._quantize_module_weights(self, module)
-        except:
-            qmodule = self._get_quantization_sequence(module, signed_activations)
-        return qmodule
-
-
-    def _quantize_module_weights(self, module):
+    def _quantize_module(self, module, signed_Activations):
         if isinstance(module, nn.Conv2d):
             qmodule = self._quantize_module_conv2d(module)
         elif isinstance(module, nn.Linear):
@@ -261,15 +247,16 @@ class RNIQQuant(BaseQuant):
         if is_biased(module):
             qmodule.bias = module.bias
 
+        qmodule = self._get_quantization_sequence(qmodule, signed_Activations)
 
         return qmodule
 
-    def _get_quantization_sequence(self, module, signed_activations):
+    def _get_quantization_sequence(self, qmodule, signed_activations):
         sequence = nn.Sequential(
             OrderedDict(
                 [
-                    ("0", module),
                     ("activations_quantizer", NoisyAct(signed=signed_activations)),
+                    ("0", qmodule),
                 ]
             )
         )
