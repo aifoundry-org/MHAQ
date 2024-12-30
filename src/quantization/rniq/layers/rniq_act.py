@@ -28,6 +28,7 @@ class NoisyAct(nn.Module):
         s = torch.exp2(self.log_act_s)
         q = torch.exp2(self.log_act_q)
         
+        self.Q.zero_point = self.act_b
         self.Q.min_val = self.act_b
         self.Q.max_val = self.act_b + q - s
         self.Q.scale = s

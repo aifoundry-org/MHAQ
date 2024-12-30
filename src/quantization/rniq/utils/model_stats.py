@@ -82,44 +82,21 @@ class ModelStats:
         return self._compute_module_stats(
             lambda m: isinstance(m, (NoisyLinear, NoisyConv2d))
         )
-
-    def print_stats(self):
-        weights_stats = self._get_module_weight_stats
-        sections = [
-            ("Model S activations", self._get_s_activations()),
-            ("Model Q activations", self._get_q_activations()),
-            ("Model B activations", self._get_b_activations()),
-            ("Model S weights", self._get_s_weights()),
-            (
-                "Model weights abs mean, std",
-                zip(weights_stats()[0], weights_stats()[1]),
-            ),
-            ("Model weights abs min, max", zip(
-                weights_stats()[2], weights_stats()[3])),
-            (
-                "Model weights bit_width",
-                [
-                    (i[0], get_activations_bit_width(
-                        torch.log2(i[1]) + 1, j[1], 0))
-                    for i, j in zip(weights_stats()[3], self._get_s_weights())
-                ],
-            ),
-        ]
-        for title, values in sections:
-            logger.debug(f"\n{title}")
-            for name, value in values:
-                logger.debug(f"{name}: {value}")
-
+    
 
 def get_layer_weights_bit_width(
         layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
-    # add 0.5 bit gap to prevent overflow
     if config == QScheme.PER_TENSOR:
-        log_q = torch.log2(layer_weights.ravel().abs().max() + torch.exp2(log_s-1))
+        min = layer_weights.amin()
+        max = layer_weights.amax()
     elif config == QScheme.PER_CHANNEL:
-        log_q = torch.log2(layer_weights.abs().amax((1, 2, 3)).reshape(log_s.shape) + torch.exp2(log_s-1))
+        min = layer_weights.amin((1, 2, 3))
+        max = layer_weights.amax((1, 2, 3))
 
-    return get_activations_bit_width(log_q, log_s, 0) + 1
+    # add 1 lsb gap to prevent overflow
+    log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))        
+
+    return get_activations_bit_width(log_q, log_s, 0)
 
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
