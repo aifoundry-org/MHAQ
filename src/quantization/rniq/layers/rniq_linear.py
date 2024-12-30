@@ -19,6 +19,7 @@ class NoisyLinear(nn.Linear):
         dtype=None,
         qscheme: QScheme = QScheme.PER_TENSOR,
         log_s_init: float = -12,
+        rand_noise: bool = False
     ) -> None:
         super().__init__(in_features, out_features, bias, device, dtype)
         self.qscheme = qscheme
@@ -32,7 +33,7 @@ class NoisyLinear(nn.Linear):
 
         self._noise_ratio = nn.Parameter(
             torch.Tensor([1,]), requires_grad=False)
-        self.Q = Quantizer(torch.exp2(self.log_wght_s), 0, -inf, inf)
+        self.Q = Quantizer(self, torch.exp2(self.log_wght_s), 0, -inf, inf)
 
         if self.qscheme == QScheme.PER_TENSOR:
             self.log_wght_s = nn.Parameter(
@@ -42,17 +43,12 @@ class NoisyLinear(nn.Linear):
                 torch.empty((out_features, 1, 1, 1)).fill_(log_s_init),
                 requires_grad=True,
             )
+        self.rand_noise = rand_noise
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         s = torch.exp2(self.log_wght_s)
         self.Q.scale = s
-
-        self.Q.rnoise_ratio = self._noise_ratio
-
-        # if self.training:
-        #     self.Q.rnoise_ratio = self._noise_ratio
-        # else:
-        #     self.Q.rnoise_ratio = torch.tensor(0)
+        self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 
@@ -64,7 +60,7 @@ class NoisyLinear(nn.Linear):
         # noise_ratio = self._noise_ratio.item()
 
         log_wght_s = self.log_wght_s
-        noise_ratio = self._noise_ratio
+        noise_ratio = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
         
         return (
             f"in_features={self.in_features}, out_features={self.out_features}, bias={bias},\n"

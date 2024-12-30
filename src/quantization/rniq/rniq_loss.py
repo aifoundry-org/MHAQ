@@ -6,7 +6,7 @@ import torch
 class PotentialLoss(nn.Module):
     def __init__(self, criterion, alpha=(1, 1, 1),
                  step_size=10,
-                 eps=0.02,
+                 eps=0,
                  lmin=0,
                  p=1,
                  a=8,
@@ -27,8 +27,8 @@ class PotentialLoss(nn.Module):
         self.s_act_loss = torch.tensor(0)
         self.weight_reg_loss = torch.tensor(0)
         self.p = torch.tensor(p)
-        self.at = torch.log2((2**torch.tensor(a)).sub(1.0))
-        self.wt = torch.log2((2**torch.tensor(w-1)).sub(1.0))
+        self.at = a #torch.log2((2**torch.tensor(a)).sub(1.0))
+        self.wt = w - 1 # Sign!   #torch.log2((2**torch.tensor(w-1)).sub(1.0))
         self.l_eps = torch.tensor(1e-3)
         self.r_eps = torch.tensor(1e-3)
         self.scale_coeff = scale_coeff

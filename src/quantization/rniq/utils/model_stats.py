@@ -6,7 +6,7 @@ from src.loggers.default_logger import logger
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
-from src.quantization.rniq.rniq import Quantizer
+#from src.quantization.rniq.rniq import Quantizer
 
 
 class ModelStats:
@@ -113,11 +113,13 @@ class ModelStats:
 
 def get_layer_weights_bit_width(
         layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
+    # add 0.5 bit gap to prevent overflow
     if config == QScheme.PER_TENSOR:
-        log_q = torch.log2(layer_weights.ravel().abs().max())
+        log_q = torch.log2(layer_weights.ravel().abs().max() + torch.exp2(log_s-1))
     elif config == QScheme.PER_CHANNEL:
-        log_q = torch.log2(layer_weights.abs().amax((1, 2, 3)).reshape(log_s.shape))
-    return get_activations_bit_width(log_q + 1, log_s, 0)
+        log_q = torch.log2(layer_weights.abs().amax((1, 2, 3)).reshape(log_s.shape) + torch.exp2(log_s-1))
+
+    return get_activations_bit_width(log_q, log_s, 0) + 1
 
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
@@ -159,10 +161,11 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
 
 
 def get_activations_bit_width(log_q, log_s, b):
-    s = torch.pow(2, log_s.ravel())
-    q = torch.pow(2, log_q.ravel())
-    zero_point = torch.zeros(1).to(s.device)
-    ql, qm = b - q / 2, b + q / 2
-    Q = Quantizer(s, zero_point, ql, qm)
-    Q.rnoise_ratio = torch.tensor([0]).to(s.device)
-    return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
+    #s = torch.pow(2, log_s.ravel())
+    #q = torch.pow(2, log_q.ravel())
+    #zero_point = torch.zeros(1).to(s.device)
+    #ql, qm = b - q / 2, b + q / 2
+    #Q = Quantizer(s, zero_point, ql, qm)
+    #Q.rnoise_ratio = torch.tensor([0]).to(s.device)
+    #return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
+    return (log_q - log_s).mean()
