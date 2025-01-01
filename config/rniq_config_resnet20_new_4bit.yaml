@@ -20,12 +20,6 @@ training:
         note: "Sym KL loss"
  
   callbacks:
-    NoiseEarlyStopping:
-      params:
-        monitor: Loss/Validation loss
-        mode: min
-        patience: 20
-        min_delta: 0.005
     ModelCheckpoint:
       params:
         monitor: Loss/ns_val_loss
@@ -47,7 +41,7 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 21
+  act_bit: 4
   distillation: True
   weight_bit: 4
   distillation_loss: Symmetrical KL

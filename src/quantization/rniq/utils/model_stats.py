@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from src.aux.types import QScheme
 from src.loggers.default_logger import logger
@@ -6,7 +7,7 @@ from src.loggers.default_logger import logger
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
-#from src.quantization.rniq.rniq import Quantizer
+from src.quantization.rniq.rniq import Quantizer
 
 
 class ModelStats:
@@ -110,6 +111,16 @@ class ModelStats:
             for name, value in values:
                 logger.debug(f"{name}: {value}")
 
+def get_true_layer_bit_width(module: torch.nn.Module):
+    if module.qscheme == QScheme.PER_TENSOR:
+        qweights = module.Q.quantize(module.weight.detach())
+    elif module.qscheme == QScheme.PER_CHANNEL:
+        channel_dim = torch.tensor(0)
+        qweights = module.Q.quantize(module.weight.detach())
+        reshaped = qweights.permute(channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]).reshape(qweights.size(channel_dim), -1)
+        bit_widths = [(np.log2(len(torch.unique(channel)))) if len(torch.unique(channel)) > 1 else 1 for channel in reshaped]
+        return np.mean(bit_widths)
+    
 
 def get_layer_weights_bit_width(
         layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
@@ -137,6 +148,26 @@ def get_activations_bit_width_mean(model: torch.nn.Module):
         ]
     ).mean()
 
+def get_true_weights_width_mean(model: torch.nn.Module):
+    lin_layers = [
+        m for m in model.modules() if isinstance(m, (NoisyConv2d, NoisyLinear))
+    ]
+    bit_widths = []
+    for module in lin_layers:
+        layer_bw = get_true_layer_bit_width(module)
+        bit_widths.append(layer_bw)
+    
+    return np.mean(bit_widths)
+
+# it's a hack to store activations bit widths inside NoisyAct module
+# in this function we just collect them
+def get_true_activations_width_mean(model: torch.nn.Module):
+    act_modules = [m for m in model.modules() if isinstance(m, (NoisyAct))]
+    bit_widths = []
+    for module in act_modules:
+        bit_widths.append(module.bw.numpy())
+    
+    return np.mean(bit_widths)
 
 def get_weights_bit_width_mean(model: torch.nn.Module):
     lin_layers = [
