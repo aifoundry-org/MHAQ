@@ -50,6 +50,12 @@ class NoisyLinear(nn.Linear):
         self.Q.scale = s
         self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
+        if self.qscheme == QScheme.PER_CHANNEL:
+            min = self.weight.amin()
+        elif self.qscheme == QScheme.PER_TENSOR:
+            min = self.weight.amin((1,2,3))
+        self.Q.zero_point = min
+
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 
         return F.linear(input, weight, self.bias)
