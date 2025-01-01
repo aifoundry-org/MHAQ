@@ -114,6 +114,8 @@ class ModelStats:
 def get_true_layer_bit_width(module: torch.nn.Module):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
+        bit_width = np.log2(qweights.unique().numel())
+        return bit_width
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
         qweights = module.Q.quantize(module.weight.detach())
