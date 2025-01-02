@@ -33,7 +33,8 @@ class NoisyAct(nn.Module):
         self.Q.min_val = self.act_b
         self.Q.max_val = self.act_b + q - s
         self.Q.scale = s
-        self.Q.rnoise_ratio = self._noise_ratio
+        # self.Q.rnoise_ratio = self._noise_ratio
+        self.Q.rnoise_ratio = torch.tensor(0)
 
         q = self.Q.quantize(x)
         if not self.training:
