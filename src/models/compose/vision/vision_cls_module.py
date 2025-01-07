@@ -14,10 +14,15 @@ class LVisionCls(pl.LightningModule):
         self.criterion = setup["criterion"]
         self.optimizer = setup["optimizer"]
         self.metrics = []
-        self.acc_metric = torchmetrics.Accuracy(
+        self.acc_metric_top_1 = torchmetrics.Accuracy(
             task="multiclass",
             num_classes=setup["config"].model.params["num_classes"],
             top_k=1,
+        )
+        self.acc_metric_top_5 = torchmetrics.Accuracy(
+            task="multiclass",
+            num_classes=setup["config"].model.params["num_classes"],
+            top_k=5,
         )
         self.lr = setup["lr"]
 
@@ -43,7 +48,8 @@ class LVisionCls(pl.LightningModule):
             checkpoint.pop("optimizer_states", None)
 
     def _init_metrics(self):
-        self.metrics.append(["Accuracy_top1", self.acc_metric])
+        self.metrics.append(["Accuracy_top1", self.acc_metric_top_1])
+        self.metrics.append(["Accuracy_top5", self.acc_metric_top_5])
 
     def configure_optimizers(self):
         return self.optimizer(self.parameters(), self.lr)

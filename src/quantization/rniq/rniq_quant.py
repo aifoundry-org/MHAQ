@@ -203,9 +203,19 @@ class RNIQQuant(BaseQuant):
             prog_bar=False,
         )
         self.log(
+            "Actual weights bit width",
+            model_stats.get_true_weights_width_mean(self.model),
+            prog_bar=False
+        )
+        self.log(
             "Mean activations bit width",
             model_stats.get_activations_bit_width_mean(self.model),
             prog_bar=False,
+        )
+        self.log(
+            "Actual activations bit widths",
+            model_stats.get_true_activations_width_mean(self.model),
+            prog_bar=False
         )
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
@@ -252,10 +262,13 @@ class RNIQQuant(BaseQuant):
         return qmodule
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
+        disabled = False
+        if self.config.quantization.act_bit == -1 or self.config.quantization.act_bit > 20:
+            disabled = True
         sequence = nn.Sequential(
             OrderedDict(
                 [
-                    ("activations_quantizer", NoisyAct(signed=signed_activations)),
+                    ("activations_quantizer", NoisyAct(signed=signed_activations, disable=disabled)),
                     ("0", qmodule),
                 ]
             )

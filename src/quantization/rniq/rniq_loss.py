@@ -27,8 +27,8 @@ class PotentialLoss(nn.Module):
         self.s_act_loss = torch.tensor(0)
         self.weight_reg_loss = torch.tensor(0)
         self.p = torch.tensor(p)
-        self.at = a #torch.log2((2**torch.tensor(a)).sub(1.0))
-        self.wt = w - 1 # Sign!   #torch.log2((2**torch.tensor(w-1)).sub(1.0))
+        self.at = a 
+        self.wt = w 
         self.l_eps = torch.tensor(1e-3)
         self.r_eps = torch.tensor(1e-3)
         self.scale_coeff = scale_coeff
@@ -105,7 +105,7 @@ class PotentialLoss(nn.Module):
         self.q_weight_loss = out_4.mean()
         self.s_act_loss = -out_1.mean()
         self.q_act_loss = out_2.mean()
-        self.weight_reg_loss = (out_4-out_3).max() + 1
+        self.weight_reg_loss = (out_4-out_3).max()
 
 
         return ploss

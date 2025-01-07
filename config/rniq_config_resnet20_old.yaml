@@ -9,7 +9,7 @@ training:
   criterion: CrossEntropyLoss
   optimizer: Adam
   learning_rate: 0.001
-  max_epochs: 400
+  max_epochs: 1000
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
@@ -24,7 +24,7 @@ training:
         filename: rniq_checkpoint_rsnt20
     ReduceLrOnOutlier:
       params:
-        reduce_scale: 8
+        reduce_scale: 4
         lr_lim: 0.005
     RandNoiseScale:
       params:
@@ -32,17 +32,17 @@ training:
 
 data:
   dataset_name: CIFAR10_DALI
-  batch_size: 8000
+  batch_size: 1000
   num_workers: 6
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 21
+  act_bit: 32
   distillation: True
   distillation_loss: Cross-Entropy
-  weight_bit: 2
+  weight_bit: 1
   excluded_layers:
     - 'module.linear'
     - 'module.conv1'

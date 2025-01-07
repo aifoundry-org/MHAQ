@@ -19,33 +19,28 @@ training:
         note: "Sym KL loss"
  
   callbacks:
-    NoiseEarlyStopping:
-      params:
-        monitor: Loss/Validation loss
-        mode: min
-        patience: 20
-        min_delta: 0.005
     ModelCheckpoint:
       params:
         filename: rniq_checkpoint_rsnt20
     ReduceLrOnOutlier:
       params:
         reduce_scale: 8
+        lr_lim: 0.01
     RandNoiseScale:
       params:
         reduce_scale: 2
 
 data:
   dataset_name: CIFAR100_DALI
-  batch_size: 8000
+  batch_size: 1000
   num_workers: 10
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 2
+  weight_bit: 2
   distillation: True
   excluded_layers:
     - 'features.init_block.conv'
