@@ -262,10 +262,13 @@ class RNIQQuant(BaseQuant):
         return qmodule
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
+        disabled = False
+        if self.config.quantization.act_bit == -1 or self.config.quantization.act_bit > 20:
+            disabled = True
         sequence = nn.Sequential(
             OrderedDict(
                 [
-                    ("activations_quantizer", NoisyAct(signed=signed_activations)),
+                    ("activations_quantizer", NoisyAct(signed=signed_activations, disable=disabled)),
                     ("0", qmodule),
                 ]
             )
