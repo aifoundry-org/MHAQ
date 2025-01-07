@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "Sym KL loss"
+        note: "Trying to sota w4a4"
  
   callbacks:
     ModelCheckpoint:
@@ -34,7 +34,7 @@ training:
 
 data:
   dataset_name: CIFAR10_DALI
-  batch_size: 3000
+  batch_size: 1000
   num_workers: 6
 
 
@@ -42,8 +42,8 @@ quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 4
-  distillation: True
   weight_bit: 4
+  distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:
     - 'features.init_block.conv'

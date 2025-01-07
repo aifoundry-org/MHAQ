@@ -35,19 +35,20 @@ training:
     RandNoiseScale:
       params:
         reduce_scale: 2
+        update_every: 20
 
 data:
   dataset_name: IMAGENET
   data_dir: ./data/imagenet
-  batch_size: 800
+  batch_size: 100
   num_workers: 8
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 21
-  weight_bit: 2
+  act_bit: 4
+  weight_bit: 4
   distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:
