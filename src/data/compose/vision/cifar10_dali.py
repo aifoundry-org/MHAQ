@@ -105,7 +105,8 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
 
         # Prepare data directories
         train_dir = os.path.join(self.data_dir, "cifar10", "train")
-        val_dir = os.path.join(self.data_dir, "cifar10",  "val")
+        # val_dir = os.path.join(self.data_dir, "cifar10",  "val")
+        val_dir = os.path.join(self.data_dir, "cifar10",  "train")
         test_dir = os.path.join(self.data_dir, "cifar10", "test")
 
         # Check if data is already prepared
