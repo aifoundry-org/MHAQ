@@ -15,10 +15,12 @@ class RandNoiseScale(Callback):
 
 
     def on_fit_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        if self.update_every == -1:
-            self.update_every == trainer.num_training_batches
         return super().on_fit_start(trainer, pl_module)
 
+    def on_train_start(self, trainer, pl_module):
+        if self.update_every == -1:
+            self.update_every = trainer.num_training_batches
+        return super().on_train_start(trainer, pl_module)
 
     def on_train_batch_end(self, trainer: Trainer, pl_module: LightningModule, outputs, batch, batch_idx: int) -> None:
         self.q_loss += pl_module.wrapped_criterion.wloss.mean().item() + pl_module.wrapped_criterion.aloss.mean().item()
