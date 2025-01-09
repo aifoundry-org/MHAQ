@@ -195,6 +195,7 @@ class RNIQQuant(BaseQuant):
             metric_value = metric(outputs[0], targets)
             # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
+            self.log(f"Metric/ns_{name}", metric_value * (self.noise_ratio()==0), prog_bar=False) 
 
         # Not very optimal approach. Cycling through model two times..
         self.log(
