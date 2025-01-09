@@ -8,13 +8,15 @@ from lightning.pytorch import Trainer, LightningModule
 logger = logging.getLogger("lightning.pytorch")
 
 class RandNoiseScale(Callback):
-    def __init__(self, reduce_scale=2, update_every=10) -> None:
+    def __init__(self, reduce_scale=2, update_every=-1) -> None:
         self.q_loss = 0
         self.update_every = update_every
         super().__init__()
 
 
     def on_fit_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        if self.update_every == -1:
+            self.update_every == trainer.num_training_batches
         return super().on_fit_start(trainer, pl_module)
 
 
