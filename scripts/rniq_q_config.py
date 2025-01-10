@@ -46,7 +46,7 @@ def main():
     trainer.fit(qmodel, datamodule=data)
 
     # Test model after quantization
-    trainer.test(qmodel, datamodule=data)
+    trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()
