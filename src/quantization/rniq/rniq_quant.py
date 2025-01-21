@@ -111,15 +111,17 @@ class RNIQQuant(BaseQuant):
             lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-            if issubclass(preceding_layer_type, nn.ReLU):
-                qmodule = self._quantize_module(
-                    module, signed_Activations=False)
-            else:
-                qmodule = self._quantize_module(
-                    module, signed_Activations=True)
+            if module.kernel_size != (1,1):
+                print(layer + " " + repr(module.kernel_size))
+                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+                if issubclass(preceding_layer_type, nn.ReLU):
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
+                else:
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
 
-            attrsetter(layer)(qmodel.model, qmodule)
+                attrsetter(layer)(qmodel.model, qmodule)
 
         return qmodel
 
