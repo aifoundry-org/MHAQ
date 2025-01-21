@@ -18,9 +18,9 @@ training:
         name: resnet20-rniq
         note: ""
   callbacks:
-      ModelCheckpoint:
+    ModelCheckpoint:
       params:
-        monitor: Metric/Accuracy_top1
+        monitor: Metric/ns_Accuracy_top1
         mode: max
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     ReduceLrOnOutlier:
