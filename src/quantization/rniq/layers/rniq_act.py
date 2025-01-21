@@ -20,7 +20,6 @@ class NoisyAct(nn.Module):
             self.act_b = torch.nn.Parameter(self._act_b, requires_grad=True)
         else:
             self.act_b = torch.nn.Parameter(self._act_b, requires_grad=False)
-            self.act_b = torch.nn.Parameter(self._act_b, requires_grad=False)
 
         self.log_act_s = torch.nn.Parameter(self._log_act_s, requires_grad=True)
         self.Q = Quantizer(self, torch.exp2(self._log_act_s), 0, -inf, inf)
