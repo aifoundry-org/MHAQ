@@ -18,12 +18,12 @@ class ModelHelper:
                 # add 0.5 bit gap to prevent overflow
                 if qscheme == QScheme.PER_CHANNEL:
                     log_wght_s.append(module.log_wght_s.ravel())
-                    min = module.weight.amin()
-                    max = module.weight.amax()
-                elif qscheme == QScheme.PER_TENSOR:
-                    log_wght_s.append(module.log_wght_s)
                     min = module.weight.amin((1,2,3))
                     max = module.weight.amax((1,2,3))
+                elif qscheme == QScheme.PER_TENSOR:
+                    log_wght_s.append(module.log_wght_s)
+                    min = module.weight.amin()
+                    max = module.weight.amax()
 
                 # add 1 lsb gap to prevent overflow
                 log_w_n_b.append(torch.log2(max - min + torch.exp2(module.log_wght_s.ravel())))
