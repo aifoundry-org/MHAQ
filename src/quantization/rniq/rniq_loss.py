@@ -11,14 +11,12 @@ class PotentialLoss(nn.Module):
                  p=1,
                  a=8,
                  w=4,
-                 scale_momentum=0.9,
+                 scale_momentum=0.99,
                  scale_coeff=1.1,
                  w_scale_m=1.0,
                  a_scale_m=1.0) -> None:
         super().__init__()
         self.alpha = torch.tensor(alpha)
-        self.register_buffer("a_scale", torch.tensor(0))
-        self.register_buffer("w_scale", torch.tensor(0))
         self.scale_momentum = scale_momentum
         self.criterion = criterion
         self.lmin = torch.log2(torch.tensor(lmin + 1))
@@ -32,14 +30,10 @@ class PotentialLoss(nn.Module):
         self.l_eps = torch.tensor(1e-3)
         self.r_eps = torch.tensor(1e-3)
         self.scale_coeff = scale_coeff
-        self.rloss_sm = None
-        self.wloss_sm = None
-        self.aloss_sm = None
-        self.w_scale = torch.tensor(1.0)
-        self.a_scale = torch.tensor(1.0)
-        self.r_scale = torch.tensor(1.0)
+        self.aloss = torch.tensor(1.0)
+        self.wloss = torch.tensor(1.0)
 
-        self.raise_a_power = 0.9
+        self.t = 0.0
 
 
     def forward(self, output, target):
@@ -75,31 +69,11 @@ class PotentialLoss(nn.Module):
 
         rloss = x.pow_(self.p)
 
-        if self.training:
-
-            if self.rloss_sm is not None:
-                self.aloss_sm = self.scale_momentum * self.aloss_sm.detach() + \
-                    (1.0 - self.scale_momentum) * aloss
-                self.wloss_sm = self.scale_momentum * self.wloss_sm.detach() + \
-                    (1.0 - self.scale_momentum) * wloss
-                self.rloss_sm = self.scale_momentum * self.rloss_sm.detach() + \
-                    (1.0 - self.scale_momentum) * rloss
-            else:
-                self.aloss_sm = aloss
-                self.wloss_sm = wloss
-                self.rloss_sm = rloss
-
-            self.w_scale = (1.0 / (self.wloss_sm + self.r_eps)).detach()
-            self.a_scale = (1.0 / (self.aloss_sm + self.r_eps)).detach()
-            self.r_scale = (1.0 / (self.rloss_sm + self.r_eps)).detach()
-
-        ploss = self.alpha[0] * wloss * self.w_scale.clone() + \
-            self.alpha[1] * aloss * self.a_scale.clone() + \
-            self.alpha[2] * rloss * self.r_scale.clone()
+        ploss = self.t * (self.alpha[0] * wloss + self.alpha[1] * aloss) + self.alpha[2] * rloss
 
 
-        self.wloss = wloss
-        self.aloss = aloss
+        self.wloss = wloss - self.l_eps
+        self.aloss = aloss - self.l_eps
         self.rloss = rloss
         self.s_weight_loss = -out_3.mean()
         self.q_weight_loss = out_4.mean()

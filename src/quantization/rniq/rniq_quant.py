@@ -77,7 +77,7 @@ class RNIQQuant(BaseQuant):
 
         qmodel.wrapped_criterion = PotentialLoss(
             criterion=self.get_distill_loss(qmodel=qmodel),
-            alpha=(1, 0.1, 1),
+            alpha=(1, 1, 100),
             # alpha=self.alpha,
             lmin=0,
             p=1,
@@ -197,7 +197,7 @@ class RNIQQuant(BaseQuant):
             metric_value = metric(outputs[0], targets)
             # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
-            self.log(f"Metric/ns_{name}", metric_value * (self.noise_ratio()==0), prog_bar=False) 
+            self.log(f"Metric/ns_{name}", metric_value * (self.wrapped_criterion.aloss<0 and self.wrapped_criterion.wloss<0), prog_bar=False) 
 
         # Not very optimal approach. Cycling through model two times..
         self.log(
@@ -224,7 +224,7 @@ class RNIQQuant(BaseQuant):
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
         # idea is to modify val loss during the stage when model is not converged 
         # to use this metric later for the chckpoint callback
-        self.log("Loss/ns_val_loss", val_loss + (10 * self.noise_ratio()), prog_bar=False) 
+        # self.log("Loss/ns_val_loss", val_loss + (10 * self.noise_ratio()), prog_bar=False) 
 
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):
