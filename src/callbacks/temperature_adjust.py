@@ -35,10 +35,14 @@ class TemperatureScale(Callback):
         pl_module.log("temperature", self.t, prog_bar=True)
 
         self.t = (self.t + self.scale) if self.total_batch > self.warmup else self.t
-        self.lr_t = (self.lr_t * self.scale_lr) if self.total_batch > self.warmup else self.lr_t
 
-        pl_module.wrapped_criterion.t = torch.tensor(self.t ** 1.6)
+        loss = pl_module.wrapped_criterion
 
+        scale_lr = self.scale_lr if loss.aloss > 0 or loss.wloss > 0 else 0.995        
+        self.lr_t = (self.lr_t * scale_lr) if self.total_batch > self.warmup else self.lr_t
+
+        loss.t = torch.tensor(self.t ** 2)
+        
         new_lr = self.lr * self.lr_t if self.total_batch > self.warmup else self.lr * self.total_batch / self.warmup
         self.change_lr(pl_module, trainer, new_lr)
             

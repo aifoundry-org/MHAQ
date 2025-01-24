@@ -18,6 +18,12 @@ training:
         name: resnet20-rniq
         note: "Symmetrical KL"
   callbacks:
+    NoiseEarlyStopping:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 10
+        min_delta: 0.005
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
@@ -25,7 +31,7 @@ training:
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
-        scale: 4.e-4
+        scale: 3.e-4
         scale_lr: 0.99985
         warmup: 200
 data:
@@ -38,7 +44,7 @@ quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   weight_bit: 1
-  act_bit: 32
+  act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:
