@@ -45,10 +45,9 @@ class CIFAR10DataModule(pl.LightningDataModule):
             cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
         )
 
-        if stage == "test":
-            self.cifar_test = CIFAR10(
-                self.data_dir, train=False, transform=self.transform_test
-            )
+        self.cifar_test = CIFAR10(
+            self.data_dir, train=False, transform=self.transform_test
+        )
 
         if stage == "predict":
             self.cifar_test = CIFAR10(
