@@ -20,7 +20,7 @@ class DistillViolinVis(Callback):
             }
         self.metric_outputs = {metric: [] for metric in self.defined_metrics}
             
-    def on_validation_batch_start(self, trainer: Trainer, pl_module: LightningModule, batch: torch.Any, batch_idx: int, dataloader_idx: int = 0) -> None:
+    def on_validation_batch_start(self, trainer: Trainer, pl_module: LightningModule, batch, batch_idx: int, dataloader_idx: int = 0) -> None:
         for metric_name, metric_func in self.defined_metrics.items():
             metric_value = metric_func(pl_module.tmodel(batch[0]), pl_module(batch[0])).item()
             self.metric_outputs[metric_name].append(metric_value)

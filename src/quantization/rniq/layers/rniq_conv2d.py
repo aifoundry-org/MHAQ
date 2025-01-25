@@ -25,6 +25,7 @@ class NoisyConv2d(nn.Conv2d):
         dtype=None,
         qscheme: QScheme = QScheme.PER_TENSOR,
         log_s_init: float = -12,
+        rand_noise: bool = False
     ) -> None:
         super().__init__(
             in_channels,
@@ -50,20 +51,19 @@ class NoisyConv2d(nn.Conv2d):
                 requires_grad=True,
             )
         self._noise_ratio = torch.nn.Parameter(torch.Tensor([1]), requires_grad=False)
-        # self._noise_ratio = torch.Tensor([1])
-        self.Q = Quantizer(torch.exp2(self.log_wght_s), 0, -inf, inf)
+        self.Q = Quantizer(self, torch.exp2(self.log_wght_s), 0, -inf, inf)
+        self.rand_noise = rand_noise
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         s = torch.exp2(self.log_wght_s)
         self.Q.scale = s
+        self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
-        self.Q.rnoise_ratio.data = self._noise_ratio
-
-        # if self.training:
-        #     self.Q.rnoise_ratio.data = self._noise_ratio
-        # else:
-        #     # self.Q.rnoise_ratio.data = self._noise_ratio
-            # self.Q.rnoise_ratio.data = torch.tensor(0)
+        if self.qscheme == QScheme.PER_CHANNEL:
+            min = self.weight.amin((1,2,3),keepdim=True)
+        elif self.qscheme == QScheme.PER_TENSOR:
+            min = self.weight.amin()
+        self.Q.zero_point = min
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 
@@ -75,7 +75,7 @@ class NoisyConv2d(nn.Conv2d):
         # noise_ratio = self._noise_ratio.item()
 
         log_wght_s = self.log_wght_s
-        noise_ratio = self._noise_ratio
+        noise_ratio = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
         
         return (
             f"in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size},\n"

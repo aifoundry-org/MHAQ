@@ -17,15 +17,9 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "Sym KL loss"
+        note: "Trying to sota w4a4"
  
   callbacks:
-    NoiseEarlyStopping:
-      params:
-        monitor: Loss/Validation loss
-        mode: min
-        patience: 20
-        min_delta: 0.005
     ModelCheckpoint:
       params:
         monitor: Loss/ns_val_loss
@@ -40,7 +34,7 @@ training:
 
 data:
   dataset_name: CIFAR10_DALI
-  batch_size: 3000
+  batch_size: 1000
   num_workers: 6
 
 
