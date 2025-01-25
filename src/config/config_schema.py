@@ -15,7 +15,7 @@ class ModelConfig(BaseModel):
     params: Dict
 
 class Callback(BaseModel):
-    params: Optional[Dict]
+    params: Optional[Dict] = None
 
 class Logger(BaseModel):
     params: Optional[Dict]
