@@ -21,7 +21,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
 
         self.transform_train = transforms.Compose(
             [
-                transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
+                # transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
                 # transforms.RandomHorizontalFlip(),
                 # transforms.RandomCrop(32, padding=4),
                 transforms.ToTensor(),
@@ -68,7 +68,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            self.cifar_val,
+            self.cifar_test,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True
