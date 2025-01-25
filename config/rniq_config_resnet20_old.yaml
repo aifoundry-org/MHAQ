@@ -19,6 +19,8 @@ training:
         note: "CE loss"
  
   callbacks:
+    LayersWidthVis:
+      params: {}
     ModelCheckpoint:
       params:
         filename: rniq_checkpoint_rsnt20

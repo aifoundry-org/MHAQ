@@ -19,6 +19,8 @@ training:
         note: "Testing resnet-18 with sym KL loss"
  
   callbacks:
+    LayersWidthVis:
+      params: {}
     NoiseEarlyStopping:
       params:
         monitor: Loss/Base train loss

@@ -18,6 +18,8 @@ training:
         name: resnet20-rniq
         note: "Symmetrical KL"
   callbacks:
+    LayersWidthVis:
+      params: {}
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
