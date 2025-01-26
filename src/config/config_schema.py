@@ -33,7 +33,6 @@ class TrainingConfig(BaseModel):
 
 
 class CalibrationConfig(BaseModel):
-    quantile: float
     act_bit: int
     weight_bit: int
 
