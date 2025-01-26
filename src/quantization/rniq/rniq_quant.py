@@ -111,7 +111,7 @@ class RNIQQuant(BaseQuant):
             if module.kernel_size != (1,1):
                 print(layer + " " + repr(module.kernel_size))
                 preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-                if issubclass(preceding_layer_type, nn.ReLU):
+                if issubclass(preceding_layer_type, nn.ReLU): #XXX: hack shoul be changed through config
                     qmodule = self._quantize_module(
                         module, signed_Activations=False)
                 else:
@@ -203,14 +203,14 @@ class RNIQQuant(BaseQuant):
 
         # targets = self.tmodel(inputs)
         # self.noise_ratio(0.0)
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = RNIQQuant.noisy_step(self, inputs)        
 
         val_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
             metric_value = metric(outputs[0], targets)
             # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
-            self.log(f"Metric/ns_{name}", metric_value * (self.wrapped_criterion.aloss<0 and self.wrapped_criterion.wloss<0), prog_bar=False) 
+            self.log(f"Metric/ns_{name}", metric_value * model_stats.is_converged(self), prog_bar=False) 
 
         # Not very optimal approach. Cycling through model two times..
         self.log(
@@ -220,7 +220,12 @@ class RNIQQuant(BaseQuant):
         )
         self.log(
             "Actual weights bit width",
-            model_stats.get_true_weights_width_mean(self.model),
+            model_stats.get_true_weights_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual weights max bit width",
+            model_stats.get_true_weights_width(self.model),
             prog_bar=False
         )
         self.log(
@@ -230,14 +235,17 @@ class RNIQQuant(BaseQuant):
         )
         self.log(
             "Actual activations bit widths",
-            model_stats.get_true_activations_width_mean(self.model),
+            model_stats.get_true_activations_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual activations max bit widths",
+            model_stats.get_true_activations_width(self.model),
             prog_bar=False
         )
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
-        # idea is to modify val loss during the stage when model is not converged 
-        # to use this metric later for the chckpoint callback
-        # self.log("Loss/ns_val_loss", val_loss + (10 * self.noise_ratio()), prog_bar=False) 
+
 
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):

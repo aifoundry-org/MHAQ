@@ -13,8 +13,8 @@ from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
 
-from src.quantization.rniq.utils.model_stats import get_true_weights_width_mean
-from src.quantization.rniq.utils.model_stats import get_true_activations_width_mean
+from src.quantization.rniq.utils.model_stats import get_true_weights_width
+from src.quantization.rniq.utils.model_stats import get_true_activations_width
 from src.loggers import WandbLogger
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -29,9 +29,9 @@ class LayersWidthVis(Callback):
         
         for (name, module) in pl_module.model.named_modules():
             if isinstance(module, (NoisyConv2d, NoisyLinear)):
-                data.append((name, get_true_weights_width_mean(module)))
+                data.append((name, get_true_weights_width(module, max=False)))
             elif isinstance(module, NoisyAct):
-                data.append((name, get_true_activations_width_mean(module)))
+                data.append((name, get_true_activations_width(module, max=False)))
             
         color_map = {True: "red", False: "blue"}
         
