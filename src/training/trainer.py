@@ -168,12 +168,12 @@ class Trainer(pl.Trainer):
             c_config = self.config.quantization.calibration
 
             if c_config.weight_bit != 0:
-                apply_quantile_weights_s(model.model, q=c_config.quantile, wbits=c_config.weight_bit)
+                apply_quantile_weights_s(model.model, wbits=c_config.weight_bit)
             else:
                 log.info("Skipping weights calibration...")
                 
             if c_config.act_bit != 0:
-                observer_hook = MinMaxObserver(c_config.quantile)  # TODO set quantile
+                observer_hook = MinMaxObserver()
                 handlers = register_lightning_activation_forward_hook(model.model, observer_hook)
                 self.validate(model, dataloaders, ckpt_path, False, datamodule)
 

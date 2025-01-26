@@ -53,3 +53,7 @@ quantization:
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
+  calibration:
+    act_bit: 10
+    weight_bit: 10
+

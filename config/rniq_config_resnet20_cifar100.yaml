@@ -48,6 +48,5 @@ quantization:
     - 'features.init_block.conv'
     - 'output'
   calibration:
-    quantile: 0.999
-    act_bit: 12
-    weight_bit: 12
+    act_bit: 10
+    weight_bit: 10
