@@ -77,13 +77,10 @@ class RNIQQuant(BaseQuant):
 
         qmodel.wrapped_criterion = PotentialLoss(
             criterion=self.get_distill_loss(qmodel=qmodel),
-            alpha=(1, 1, 100),
-            # alpha=self.alpha,
-            lmin=0,
+            alpha=(1, 1, 1),
             p=1,
             a=self.act_bit,
             w=self.weight_bit,
-            scale_momentum=0.9,
         )
 
         qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(
