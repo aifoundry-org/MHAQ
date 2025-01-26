@@ -5,6 +5,8 @@ import torch
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
+from src.quantization.rniq.utils import model_stats
+
 logger = logging.getLogger("lightning.pytorch")
 
 class TemperatureScale(Callback):
@@ -13,6 +15,7 @@ class TemperatureScale(Callback):
         self.scale_lr = scale_lr
         self.tol = tol
         self.warmup = warmup
+        self.converged = False
         super().__init__()
 
 
@@ -38,10 +41,10 @@ class TemperatureScale(Callback):
 
         loss = pl_module.wrapped_criterion
 
-        scale_lr = self.scale_lr if loss.aloss > 0 or loss.wloss > 0 else 0.995        
+        scale_lr = self.scale_lr if not self.converged else 0.999        
         self.lr_t = (self.lr_t * scale_lr) if self.total_batch > self.warmup else self.lr_t
 
-        loss.t = torch.tensor(self.t ** 2)
+        loss.t = torch.tensor(self.t)
         
         new_lr = self.lr * self.lr_t if self.total_batch > self.warmup else self.lr * self.total_batch / self.warmup
         self.change_lr(pl_module, trainer, new_lr)
@@ -54,6 +57,7 @@ class TemperatureScale(Callback):
 
 
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
+        self.converged = model_stats.is_converged(pl_module)
         
         return super().on_train_epoch_end(trainer, pl_module)
 

@@ -77,13 +77,10 @@ class RNIQQuant(BaseQuant):
 
         qmodel.wrapped_criterion = PotentialLoss(
             criterion=self.get_distill_loss(qmodel=qmodel),
-            alpha=(1, 1, 100),
-            # alpha=self.alpha,
-            lmin=0,
+            alpha=(1, 1, 1),
             p=1,
             a=self.act_bit,
             w=self.weight_bit,
-            scale_momentum=0.9,
         )
 
         qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(
@@ -114,7 +111,7 @@ class RNIQQuant(BaseQuant):
             if module.kernel_size != (1,1):
                 print(layer + " " + repr(module.kernel_size))
                 preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-                if issubclass(preceding_layer_type, nn.ReLU):
+                if issubclass(preceding_layer_type, nn.ReLU): #XXX: hack shoul be changed through config
                     qmodule = self._quantize_module(
                         module, signed_Activations=False)
                 else:
@@ -123,7 +120,23 @@ class RNIQQuant(BaseQuant):
 
                 attrsetter(layer)(qmodel.model, qmodule)
 
+        if self.config.quantization.freeze_batchnorm:
+            self.freeze_all_batchnorm_layers(qmodel)                
+
         return qmodel
+    
+    def freeze_all_batchnorm_layers(self, model):
+        # Freezes all batch normalization layers in the model. 
+        # This means they won't update running means/variances 
+        # during training and their parameters won't receive gradients.
+        for module in model.modules():
+            # Check for any batch norm variant
+            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                # Switch to evaluation mode (affects running stats)
+                module.eval()
+                # Freeze BN params
+                module.weight.requires_grad = False
+                module.bias.requires_grad = False
 
     @staticmethod
     def noise_ratio(self, x=None):
@@ -190,14 +203,14 @@ class RNIQQuant(BaseQuant):
 
         # targets = self.tmodel(inputs)
         # self.noise_ratio(0.0)
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = RNIQQuant.noisy_step(self, inputs)        
 
         val_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
             metric_value = metric(outputs[0], targets)
             # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
-            self.log(f"Metric/ns_{name}", metric_value * (self.wrapped_criterion.aloss<0 and self.wrapped_criterion.wloss<0), prog_bar=False) 
+            self.log(f"Metric/ns_{name}", metric_value * model_stats.is_converged(self), prog_bar=False) 
 
         # Not very optimal approach. Cycling through model two times..
         self.log(
@@ -207,7 +220,12 @@ class RNIQQuant(BaseQuant):
         )
         self.log(
             "Actual weights bit width",
-            model_stats.get_true_weights_width_mean(self.model),
+            model_stats.get_true_weights_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual weights max bit width",
+            model_stats.get_true_weights_width(self.model),
             prog_bar=False
         )
         self.log(
@@ -217,14 +235,17 @@ class RNIQQuant(BaseQuant):
         )
         self.log(
             "Actual activations bit widths",
-            model_stats.get_true_activations_width_mean(self.model),
+            model_stats.get_true_activations_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual activations max bit widths",
+            model_stats.get_true_activations_width(self.model),
             prog_bar=False
         )
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
-        # idea is to modify val loss during the stage when model is not converged 
-        # to use this metric later for the chckpoint callback
-        # self.log("Loss/ns_val_loss", val_loss + (10 * self.noise_ratio()), prog_bar=False) 
+
 
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):

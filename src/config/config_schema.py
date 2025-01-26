@@ -15,7 +15,7 @@ class ModelConfig(BaseModel):
     params: Dict
 
 class Callback(BaseModel):
-    params: Optional[Dict]
+    params: Optional[Dict] = None
 
 class Logger(BaseModel):
     params: Optional[Dict]
@@ -48,6 +48,7 @@ class QuantizationConfig(BaseModel):
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
+    freeze_batchnorm: Optional[bool] = False
 
 
 class DataConfig(BaseModel):

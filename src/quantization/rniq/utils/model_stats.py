@@ -112,7 +112,7 @@ class ModelStats:
             for name, value in values:
                 logger.debug(f"{name}: {value}")
 
-def get_true_layer_bit_width(module: torch.nn.Module):
+def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
         bit_width = np.log2(qweights.unique().numel())
@@ -122,7 +122,7 @@ def get_true_layer_bit_width(module: torch.nn.Module):
         qweights = module.Q.quantize(module.weight.detach())
         reshaped = qweights.permute(channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(len(torch.unique(channel)))) if len(torch.unique(channel)) > 1 else 1 for channel in reshaped]
-        return np.mean(bit_widths)
+        return np.max(bit_widths) if max else np.mean(bit_widths)
     
 
 def get_layer_weights_bit_width(
@@ -156,7 +156,8 @@ def get_activations_bit_width_mean(model: torch.nn.Module):
         ]
     ).mean()
 
-def get_true_weights_width_mean(model: torch.nn.Module):
+
+def get_true_weights_width(model: torch.nn.Module, max=True):
     lin_layers = [
         m for m in model.modules() if isinstance(m, (NoisyConv2d, NoisyLinear))
     ]
@@ -165,17 +166,19 @@ def get_true_weights_width_mean(model: torch.nn.Module):
         layer_bw = get_true_layer_bit_width(module)
         bit_widths.append(layer_bw)
     
-    return np.mean(bit_widths)
+    return np.max(bit_widths) if max else np.mean(bit_widths)
+
 
 # it's a hack to store activations bit widths inside NoisyAct module
 # in this function we just collect them
-def get_true_activations_width_mean(model: torch.nn.Module):
+def get_true_activations_width(model: torch.nn.Module, max=True):
     act_modules = [m for m in model.modules() if isinstance(m, (NoisyAct))]
     bit_widths = []
     for module in act_modules:
         bit_widths.append(module.bw.numpy())
     
-    return np.mean(bit_widths)
+    return np.max(bit_widths) if max else np.mean(bit_widths)
+
 
 def get_weights_bit_width_mean(model: torch.nn.Module):
     lin_layers = [
@@ -208,3 +211,9 @@ def get_activations_bit_width(log_q, log_s, b):
     #Q.rnoise_ratio = torch.tensor([0]).to(s.device)
     #return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
     return (log_q - log_s).mean()
+
+def is_converged(model):
+    loss = model.wrapped_criterion
+    converged = get_true_weights_width(model) <= loss.wt and  get_true_activations_width(model) <= loss.at
+    return converged
+

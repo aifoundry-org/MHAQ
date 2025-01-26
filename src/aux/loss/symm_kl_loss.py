@@ -11,4 +11,4 @@ class SymmetricalKL(_Loss):
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         x = F.log_softmax(input, dim=1)
         y = F.log_softmax(target, dim=1)
-        return F.kl_div(x, y, log_target=True) + F.kl_div(y, x, log_target=True)
+        return F.kl_div(x, y, log_target=True, reduction="batchmean") + F.kl_div(y, x, log_target=True, reduction="batchmean")

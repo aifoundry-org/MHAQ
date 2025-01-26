@@ -7,8 +7,8 @@ model:
 
 training:
   criterion: CrossEntropyLoss
-  optimizer: Adam
-  learning_rate: 0.005
+  optimizer: RAdam
+  learning_rate: 0.002
   max_epochs: 1000
   val_every_n_epochs: 2
   log_every_n_steps: 10
@@ -18,12 +18,14 @@ training:
         name: resnet20-rniq
         note: "Symmetrical KL"
   callbacks:
+    LayersWidthVis:
+      params: {}
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 10
-        min_delta: 0.005
+        patience: 50
+        min_delta: 0.0001
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
@@ -31,11 +33,11 @@ training:
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
-        scale: 3.e-4
-        scale_lr: 0.99985
-        warmup: 200
+        scale: 0.002
+        scale_lr: 1 #0.99985
+        warmup: 1000
 data:
-  dataset_name: CIFAR10_DALI
+  dataset_name: CIFAR10
   batch_size: 1000
   num_workers: 8
 
@@ -47,6 +49,7 @@ quantization:
   act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
+  freeze_batchnorm: False
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'

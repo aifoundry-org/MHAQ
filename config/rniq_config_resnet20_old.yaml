@@ -7,8 +7,8 @@ model:
 
 training:
   criterion: CrossEntropyLoss
-  optimizer: Adam
-  learning_rate: 0.001
+  optimizer: RAdam
+  learning_rate: 0.002
   max_epochs: 1000
   val_every_n_epochs: 2
   log_every_n_steps: 10
@@ -16,33 +16,40 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "CE loss"
- 
+        note: "Symmetrical KL"
   callbacks:
+    LayersWidthVis:
+      params: {}
+    NoiseEarlyStopping:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 50
+        min_delta: 0.0001
     ModelCheckpoint:
       params:
-        filename: rniq_checkpoint_rsnt20
-    ReduceLrOnOutlier:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+    TemperatureScale:
       params:
-        reduce_scale: 4
-        lr_lim: 0.005
-    RandNoiseScale:
-      params:
-        reduce_scale: 2
-
+        scale: 0.002
+        scale_lr: 1 #0.99985
+        warmup: 1000
 data:
-  dataset_name: CIFAR10_DALI
+  dataset_name: CIFAR10
   batch_size: 1000
-  num_workers: 6
+  num_workers: 8
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 32
-  distillation: True
-  distillation_loss: Cross-Entropy
   weight_bit: 1
+  act_bit: 1
+  distillation: True
+  distillation_loss: Symmetrical KL
+  freeze_batchnorm: False
   excluded_layers:
     - 'module.linear'
     - 'module.conv1'
