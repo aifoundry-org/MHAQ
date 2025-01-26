@@ -37,11 +37,11 @@ def main():
 
     data = dataset_composer.compose()
     model = model_composer.compose()
-    qmodel = quantizer.quantize(model, in_place=False)
 
-    # Test model before quantization
-    trainer.test(model, datamodule=data)
+    # Validate  model before quantization
+    trainer.validate(model, datamodule=data)
 
+    qmodel = quantizer.quantize(model, in_place=True)
     # Validate model after layers replacement
     trainer.validate(qmodel, datamodule=data)
 
