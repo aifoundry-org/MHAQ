@@ -29,15 +29,15 @@ class LayersWidthVis(Callback):
         
         for (name, module) in pl_module.model.named_modules():
             if isinstance(module, (NoisyConv2d, NoisyLinear)):
-                data.append((name, get_true_weights_width(module, max=False)))
+                data.append((name, get_true_weights_width(module)))
             elif isinstance(module, NoisyAct):
-                data.append((name, get_true_activations_width(module, max=False)))
+                data.append((name, get_true_activations_width(module)))
             
         color_map = {True: "red", False: "blue"}
         
         fig_height = len(data) * 0.2 # Set 0.2 inch per bar
         fig_width = 10  # Set a fixed width
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        fig, ax = plt.subplots()#figsize=(fig_width, fig_height))
         df = pd.DataFrame(data=data, columns=["Name", "Value"])      
         df["act"] = df["Name"].str.contains("activations_quantizer", case=False)
         
