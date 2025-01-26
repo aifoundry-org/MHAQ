@@ -32,6 +32,11 @@ class TrainingConfig(BaseModel):
     loggers: Optional[Dict[str, Logger]] = []
 
 
+class CalibrationConfig(BaseModel):
+    quantile: float
+    act_bit: int
+    weight_bit: int
+
 class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
@@ -42,6 +47,7 @@ class QuantizationConfig(BaseModel):
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
+    calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
 
 
