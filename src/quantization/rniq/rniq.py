@@ -8,7 +8,7 @@ class QNoise(Function):
     # Note that forward, setup_context, and backward are @staticmethods
     @staticmethod
     def forward(input, scale):
-        output = scale * (torch.round(input) - input)
+        output = torch.round(input) - input
         return output
 
     @staticmethod
@@ -110,7 +110,7 @@ class Quantizer:
             #noise = self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise
             noise = qnoise
             
-            value = value + noise / self.scale
+            value = value + noise
 
         #assert valid values
         if not self.module.training:
@@ -134,8 +134,7 @@ class Quantizer:
         return quantized_value + self.zero_point
 
     def _get_qnoise(self, value: Tensor, scale: Tensor):
-        return (torch.round(value) - value).detach() * scale
+        return (torch.round(value) - value).detach()
 
     def _get_rnoise(self, value: Tensor, scale: Tensor):
-        #return torch.randint(2, size=value.shape, dtype=value.dtype, device=value.device).sub(0.5).detach()
         return scaled_noise(value, scale)
