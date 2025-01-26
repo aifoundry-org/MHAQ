@@ -123,7 +123,23 @@ class RNIQQuant(BaseQuant):
 
                 attrsetter(layer)(qmodel.model, qmodule)
 
+        if self.config.quantization.freeze_batchnorm:
+            self.freeze_all_batchnorm_layers(qmodel)                
+
         return qmodel
+    
+    def freeze_all_batchnorm_layers(self, model):
+        # Freezes all batch normalization layers in the model. 
+        # This means they won't update running means/variances 
+        # during training and their parameters won't receive gradients.
+        for module in model.modules():
+            # Check for any batch norm variant
+            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                # Switch to evaluation mode (affects running stats)
+                module.eval()
+                # Freeze BN params
+                module.weight.requires_grad = False
+                module.bias.requires_grad = False
 
     @staticmethod
     def noise_ratio(self, x=None):

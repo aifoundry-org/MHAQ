@@ -42,6 +42,7 @@ class QuantizationConfig(BaseModel):
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
+    freeze_batchnorm: Optional[bool] = False
 
 
 class DataConfig(BaseModel):
