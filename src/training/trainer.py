@@ -162,7 +162,7 @@ class Trainer(pl.Trainer):
         verbose=True,
         datamodule=None,
     ):
-        if 'calibration' in self.config.quantization.__dict__:
+        if 'calibration' in self.config.quantization.__dict__ and self.config.quantization.calibration:
 
             log.info("\nPerforming calibration...")
             c_config = self.config.quantization.calibration
