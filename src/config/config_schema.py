@@ -41,8 +41,9 @@ class QuantizationConfig(BaseModel):
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    distillation: Optional[bool] = False
+    distillation: Optional[bool] = False    
     distillation_loss: Optional[str] = "Cross-Entropy"
+    distillation_teacher: Optional[str] = None
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
