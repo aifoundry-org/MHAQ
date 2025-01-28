@@ -2,6 +2,7 @@ import lightning.pytorch as pl
 import torch.nn.functional as F
 import torch
 
+from src.models.resnet.resnet_cifar import resnet20_cifar10_new
 from src.quantization.abc.abc_quant import BaseQuant
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
@@ -58,7 +59,10 @@ class RNIQQuant(BaseQuant):
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
         if self.config.quantization.distillation:
-            tmodel = deepcopy(lmodel).eval()
+            if not self.config.quantization.distillation_teacher:
+                tmodel = deepcopy(lmodel).eval()
+            else: #XXX fix me
+                tmodel = resnet20_cifar10_new(pretrained=True)
         if in_place:
             qmodel = lmodel
         else:
