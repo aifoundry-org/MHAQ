@@ -33,8 +33,7 @@ training:
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
-        scale: 0.002
-        scale_lr: 1 #0.99985
+        scale_lr: 1
         warmup: 1000
 data:
   dataset_name: CIFAR10
@@ -49,6 +48,7 @@ quantization:
   act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
+  distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
   excluded_layers:
     - 'module.linear'

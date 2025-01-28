@@ -10,10 +10,9 @@ from src.quantization.rniq.utils import model_stats
 logger = logging.getLogger("lightning.pytorch")
 
 class TemperatureScale(Callback):
-    def __init__(self, scale=1.e-3, scale_lr=0.999, tol=1e-2, warmup = 50) -> None:
-        self.scale = scale
+    def __init__(self, scale_anneal=0.9985, scale_lr=1.0, warmup = 50) -> None:
+        self.scale_anneal = scale_anneal
         self.scale_lr = scale_lr
-        self.tol = tol
         self.warmup = warmup
         self.converged = False
         super().__init__()
@@ -41,7 +40,7 @@ class TemperatureScale(Callback):
 
         loss = pl_module.wrapped_criterion
 
-        scale_lr = self.scale_lr if not self.converged else 0.999        
+        scale_lr = self.scale_lr if not self.converged else self.scale_anneal       
         self.lr_t = (self.lr_t * scale_lr) if self.total_batch > self.warmup else self.lr_t
 
         loss.t = torch.tensor(self.t)
