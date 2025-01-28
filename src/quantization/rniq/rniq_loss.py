@@ -57,12 +57,12 @@ class PotentialLoss(nn.Module):
         rloss = loss.pow_(self.p)
 
         calib_mul = self.loss_sum / self.cnt
+
+        ploss = calib_mul * self.t * (self.alpha[0] * wloss + self.alpha[1] * aloss) + self.alpha[2] * rloss
+
         if self.training:
             self.loss_sum += rloss.detach()        
             self.cnt += 1
-            
-        ploss = calib_mul * self.t * (self.alpha[0] * wloss + self.alpha[1] * aloss) + self.alpha[2] * rloss
-
 
         self.wloss = wloss
         self.aloss = aloss
