@@ -64,8 +64,8 @@ def apply_mean_stats_activations(module, abits=8, max_bits = 24):
                 m.log_act_s = torch.nn.Parameter(torch.tensor([log_s]), requires_grad=m.log_act_s.requires_grad)
             else:
                 # pruned 
-                m.log_act_q = torch.nn.Parameter(torch.tensor([max - min]), requires_grad=False)
-                m.log_act_s = torch.nn.Parameter(torch.tensor([max - min]), requires_grad=False)
+                m.log_act_q = torch.nn.Parameter(torch.tensor([0]), requires_grad=False)
+                m.log_act_s = torch.nn.Parameter(torch.tensor([0]), requires_grad=False)
                 m.act_b = torch.nn.Parameter(torch.tensor([min]), requires_grad=False)
 
 
@@ -80,7 +80,8 @@ def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channe
             if not m.log_wght_s.requires_grad:
                 wbits = max_bits
 
-            log_s = torch.log2((max - min) / (2**wbits - 1)).reshape(m.log_wght_s.shape)
+            # XXX: handle max-min == 0
+            log_s = torch.max(torch.tensor(m.log_wght_s), torch.log2((max - min) / (2**wbits - 1)).reshape(m.log_wght_s.shape))
 
             #m.log_wght_s = torch.nn.Parameter(torch.full(m.log_wght_s.shape, log_s), requires_grad=m.log_wght_s.requires_grad) # per-tensor
             m.log_wght_s = torch.nn.Parameter(log_s, requires_grad=m.log_wght_s.requires_grad)
