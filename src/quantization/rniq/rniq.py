@@ -36,8 +36,8 @@ class QNoise(Function):
         if ctx.needs_input_grad[0]:
             grad_input = grad_output * 0
         if ctx.needs_input_grad[1]:
-            grad_scale = grad_output * (torch.round(input) - input)
-            #grad_scale = grad_output * (torch.randint(2, size=input.shape, dtype=input.dtype, device=input.device).sub(0.5))
+            #grad_scale = grad_output * (torch.round(input) - input)
+            grad_scale = grad_output * (torch.randint(2, size=input.shape, dtype=input.dtype, device=input.device).sub(0.5))
             #grad_scale = grad_output * torch.normal(0, 0.2888, size=input.shape, dtype=input.dtype, device=input.device)
             #grad_scale = grad_output * (torch.rand_like(input).sub_(0.5))
 
@@ -104,11 +104,11 @@ class Quantizer:
         if self._is_positive_scale():
             value = value / self.scale
 
-            qnoise = self._get_qnoise(value, self.scale)
-            #rnoise = self._get_rnoise(value, self.scale)
+            #qnoise = self._get_qnoise(value, self.scale)
+            rnoise = self._get_rnoise(value, self.scale)
 
             #noise = self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise
-            noise = qnoise
+            noise = rnoise
             
             value = value + noise
 
@@ -118,7 +118,7 @@ class Quantizer:
                 raise AssertionError("Not all elements in the tensor above min val")
             if self._is_positive_scale() and (torch.any(value > torch.ceil(self.max_val / self.scale))):
                 raise AssertionError("Not all elements in the tensor below max val")            
-            if self.rnoise_ratio == 0 and not torch.all((value == value.floor()) | (value == value.ceil())):
+            if not torch.all((value == value.floor()) | (value == value.ceil())):
                 raise AssertionError("Not all elements in the tensor have integer values.")
         
         return value
