@@ -40,10 +40,9 @@ class CIFAR100DataModule(pl.LightningDataModule):
             cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
         )
 
-        if stage == "test":
-            self.cifar_test = CIFAR100(
-                self.data_dir, train=False, transform=self.transform_test
-            )
+        self.cifar_test = CIFAR100(
+            self.data_dir, train=False, transform=self.transform_test
+        )
 
         if stage == "predict":
             self.cifar_test = CIFAR100(
@@ -63,7 +62,7 @@ class CIFAR100DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            self.cifar_val,
+            self.cifar_test,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True

@@ -21,19 +21,22 @@ training:
   callbacks:
     ModelCheckpoint:
       params:
-        monitor: Loss/ns_val_loss
-        mode: min
-        filename: rniq_checkpoint-{epoch:02d}-"{Loss/Validation loss:.2f}"
-    ReduceLrOnOutlier:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+    TemperatureScale:
       params:
-        reduce_scale: 8
-        lr_lim: 0.01
-    RandNoiseScale:
+        scale_lr: 1
+        warmup: 1000
+    NoiseEarlyStopping:
       params:
-        reduce_scale: 2
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 50
+        min_delta: 0.0001
 
 data:
-  dataset_name: CIFAR100_DALI
+  dataset_name: CIFAR100
   batch_size: 1000
   num_workers: 10
 
@@ -41,12 +44,12 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 2
-  weight_bit: 2
+  act_bit: 3
+  weight_bit: 3
   distillation: True
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
-  calibration:
-    act_bit: 10
-    weight_bit: 10
+  # calibration:
+    # act_bit: 10
+    # weight_bit: 10
