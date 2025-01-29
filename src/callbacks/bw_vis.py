@@ -50,5 +50,6 @@ class LayersWidthVis(Callback):
         plt.tight_layout()
         trainer.logger.log_image("layer_dist", [wandb.Image(fig)])
         trainer.logger.log_table(key="widths", columns=["Name", "Value"], data=data)
+        plt.close()
 
         return super().on_validation_end(trainer, pl_module)

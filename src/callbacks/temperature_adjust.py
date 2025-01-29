@@ -36,7 +36,7 @@ class TemperatureScale(Callback):
                 
         pl_module.log("temperature", self.t, prog_bar=True)
 
-        self.t = (self.t + self.scale) if self.total_batch > self.warmup else self.t
+        self.t = (self.t + self.scale_lr) if self.total_batch > self.warmup else self.t
 
         loss = pl_module.wrapped_criterion
 
