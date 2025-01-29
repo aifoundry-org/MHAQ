@@ -48,7 +48,7 @@ quantization:
   act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
-  distillation_teacher: resnet20_cifar10_new
+  #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
   excluded_layers:
     - 'module.linear'
