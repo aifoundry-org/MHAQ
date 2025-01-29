@@ -26,13 +26,15 @@ class CustomLRScheduler(_LRScheduler):
         - If epoch > 80:  LR *= 1e-1
     """
     def __init__(self, optimizer, last_epoch=-1):
-        self.initial_lr = 1e-3
+        self.initial_lr = 5e-4
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
         epoch = self.last_epoch
         lr = self.initial_lr
-        if epoch > 80:
+        if epoch < 10:
+            lr = 0
+        elif epoch > 80:
             lr *= 0.5e-3
         elif epoch > 60:
             lr *= 1e-3
@@ -187,7 +189,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
 
     # Weight decay of 1e-4 as in Keras l2(1e-4)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    optimizer = optim.RAdam(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
     # Learning rate scheduler that mimics your Keras code
     scheduler = CustomLRScheduler(optimizer)
@@ -195,8 +197,13 @@ def main():
     # For saving best model
     save_dir = os.path.join(os.getcwd(), "saved_models_pytorch")
     os.makedirs(save_dir, exist_ok=True)
-    best_acc = 0.0
+
     best_model_path = os.path.join(save_dir, f"cifar10_ResNet{depth}v1_best.th")
+    model.load_state_dict(torch.load(best_model_path)['state_dict'])
+    best_loss, best_acc = evaluate(model, device, test_loader, criterion)
+    print(f"Best Model Test Loss: {best_loss:.4f} | Best Model Test Acc: {best_acc:.2f}%")
+    #best_acc = 92.62
+
 
     # -----------------------------
     # Training Loop
@@ -220,6 +227,8 @@ def main():
             best_acc = test_acc
             torch.save({'state_dict': model.state_dict()}, best_model_path)
             print(f"Model saved to {best_model_path} (Accuracy: {best_acc:.2f}%)")
+        elif test_acc < best_acc:
+            model.load_state_dict(torch.load(best_model_path)['state_dict'])
 
     # -----------------------------
     # Final Evaluation
