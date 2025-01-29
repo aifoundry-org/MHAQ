@@ -33,7 +33,6 @@ training:
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
-        temp_delta: 0.002
         scale_lr: 1
         warmup: 1000
 data:
