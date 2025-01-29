@@ -10,10 +10,11 @@ from src.quantization.rniq.utils import model_stats
 logger = logging.getLogger("lightning.pytorch")
 
 class TemperatureScale(Callback):
-    def __init__(self, scale_anneal=0.9985, scale_lr=1.0, warmup = 50) -> None:
+    def __init__(self, scale_anneal=0.9985, scale_lr=1.0, temp_delta = 0.001, warmup = 50) -> None:
         self.scale_anneal = scale_anneal
         self.scale_lr = scale_lr
         self.warmup = warmup
+        self.temp_delta = temp_delta
         self.converged = False
         super().__init__()
 
