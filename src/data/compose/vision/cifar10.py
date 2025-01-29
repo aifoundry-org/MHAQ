@@ -22,8 +22,8 @@ class CIFAR10DataModule(pl.LightningDataModule):
         self.transform_train = transforms.Compose(
             [
                 # transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
-                # transforms.RandomHorizontalFlip(),
-                # transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, padding=4),
                 transforms.ToTensor(),
                 self._normalize(),
             ]
@@ -41,9 +41,12 @@ class CIFAR10DataModule(pl.LightningDataModule):
         cifar_data = CIFAR10(
             self.data_dir, train=True, transform=self.transform_train
         )
-        self.cifar_train, self.cifar_val = random_split(
-            cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
-        )
+
+        self.cifar_train = cifar_data
+
+        # self.cifar_train, self.cifar_val = random_split(
+            # cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
+        # )
 
         self.cifar_test = CIFAR10(
             self.data_dir, train=False, transform=self.transform_test

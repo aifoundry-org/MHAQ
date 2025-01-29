@@ -36,9 +36,12 @@ class CIFAR100DataModule(pl.LightningDataModule):
         cifar_data = CIFAR100(
             self.data_dir, train=True, transform=self.transform_train
         )
-        self.cifar_train, self.cifar_val = random_split(
-            cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
-        )
+
+        self.cifar_train = cifar_data
+
+        # self.cifar_train, self.cifar_val = random_split(
+            # cifar_data, [45000, 5000], generator=torch.Generator().manual_seed(42)
+        # )
 
         self.cifar_test = CIFAR100(
             self.data_dir, train=False, transform=self.transform_test
