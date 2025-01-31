@@ -8,6 +8,7 @@ class PotentialLoss(nn.Module):
                  p=1,
                  a=8,
                  w=4,
+                 lossless=False
                  ) -> None:
         super().__init__()
         self.alpha = torch.tensor(alpha)
@@ -18,6 +19,7 @@ class PotentialLoss(nn.Module):
         self.p = torch.tensor(p)
         self.at = a 
         self.wt = w 
+        self.lossless = lossless
         self.l_eps = torch.tensor(1e-3)
         self.r_eps = torch.tensor(1e-3)
         self.aloss = torch.tensor(1.0)
@@ -58,7 +60,9 @@ class PotentialLoss(nn.Module):
 
         calib_mul = self.loss_sum / self.cnt
 
-        ploss = calib_mul * self.t * (self.alpha[0] * wloss + self.alpha[1] * aloss) + self.alpha[2] * rloss
+        l1, l2 = (1.0, self.t) if self.lossless else (self.t, 1.0)
+
+        ploss = calib_mul * l1 * (self.alpha[0] * wloss + self.alpha[1] * aloss) + l2 * self.alpha[2] * rloss
 
         if self.training:
             self.loss_sum += rloss.detach()        
