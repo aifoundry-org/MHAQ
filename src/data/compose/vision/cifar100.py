@@ -19,6 +19,8 @@ class CIFAR100DataModule(pl.LightningDataModule):
 
         self.transform_train = transforms.Compose(
             [
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32, padding=4, padding_mode="reflect"),
                 transforms.ToTensor(),
                 self._normalize(),
             ]

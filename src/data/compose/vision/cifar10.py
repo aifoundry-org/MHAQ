@@ -23,7 +23,7 @@ class CIFAR10DataModule(pl.LightningDataModule):
             [
                 # transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
                 transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(32, padding=4),
+                transforms.RandomCrop(32, padding=4, padding_mode="reflect"),
                 transforms.ToTensor(),
                 self._normalize(),
             ]
