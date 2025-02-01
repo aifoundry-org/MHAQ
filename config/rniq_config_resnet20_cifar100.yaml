@@ -7,8 +7,8 @@ model:
 
 training:
   criterion: CrossEntropyLoss
-  optimizer: Adam
-  learning_rate: 0.001
+  optimizer: RAdam
+  learning_rate: 0.002
   max_epochs: 1500
   val_every_n_epochs: 2
   log_every_n_steps: 10
@@ -44,12 +44,13 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 3
-  weight_bit: 3
+  act_bit: 4
+  weight_bit: 4
   distillation: True
+  distillation_loss: Symmetrical KL
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
-  # calibration:
-    # act_bit: 10
-    # weight_bit: 10
+  calibration:
+    act_bit: 10
+    weight_bit: 10
