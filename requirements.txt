@@ -161,5 +161,5 @@ urllib3==2.2.2
 wandb==0.18.1
 Werkzeug==3.0.4
 wrapt==1.16.0
-yarl==1.9.4
+yarl==1.18.3
 zipp==3.20.0

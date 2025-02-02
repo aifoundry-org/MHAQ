@@ -158,17 +158,17 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
             )
             self.train_pipeline.build()
 
-        if stage == "test" or stage is None:
-            self.test_pipeline = create_dali_pipeline(
-                batch_size=self.batch_size,
-                num_threads=self.num_workers,
-                device_id=self.device_id,
-                data_dir=os.path.join(self.data_dir, "cifar10", "test"),
-                crop=(32, 32),
-                size=32,
-                is_training=False,
-            )
-            self.test_pipeline.build()
+        # if stage == "test" or stage is None:
+        self.test_pipeline = create_dali_pipeline(
+            batch_size=self.batch_size,
+            num_threads=self.num_workers,
+            device_id=self.device_id,
+            data_dir=os.path.join(self.data_dir, "cifar10", "test"),
+            crop=(32, 32),
+            size=32,
+            is_training=False,
+        )
+        self.test_pipeline.build()
 
     def train_dataloader(self):
         dali_iter = DALIClassificationIterator(
@@ -181,7 +181,7 @@ class CIFAR10DALIDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         dali_iter = DALIClassificationIterator(
-            self.val_pipeline,
+            self.test_pipeline,
             reader_name="Reader",
             last_batch_policy=LastBatchPolicy.PARTIAL,
             auto_reset=True,

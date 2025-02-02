@@ -1,14 +1,14 @@
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
-from .lr_loss_revert import ReduceLrOnOutlier
-from .noise_ratio_adjust import RandNoiseScale
+from .temperature_adjust import TemperatureScale
 from .violin_vis import DistillViolinVis
 from .early_stopping import NoiseEarlyStopping
+from .bw_vis import LayersWidthVis
 
 __all__ = [
     "ModelCheckpoint",
     "EarlyStopping",
-    "ReduceLrOnOutlier",
-    "RandNoiseScale",
+    "TemperatureScale",
     "DistillViolinVis",
     "NoiseEarlyStopping",
+    "LayersWidthVis"
 ]

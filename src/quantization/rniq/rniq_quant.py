@@ -2,6 +2,7 @@ import lightning.pytorch as pl
 import torch.nn.functional as F
 import torch
 
+from src.models.resnet.resnet_cifar import resnet20_cifar10_new
 from src.quantization.abc.abc_quant import BaseQuant
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
@@ -58,7 +59,10 @@ class RNIQQuant(BaseQuant):
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
         if self.config.quantization.distillation:
-            tmodel = deepcopy(lmodel).eval()
+            if not self.config.quantization.distillation_teacher:
+                tmodel = deepcopy(lmodel).eval()
+            else: #XXX fix me
+                tmodel = resnet20_cifar10_new(pretrained=True)
         if in_place:
             qmodel = lmodel
         else:
@@ -77,13 +81,10 @@ class RNIQQuant(BaseQuant):
 
         qmodel.wrapped_criterion = PotentialLoss(
             criterion=self.get_distill_loss(qmodel=qmodel),
-            alpha=(1, 1, 1),
-            # alpha=self.alpha,
-            lmin=0,
+            alpha=(1, 0.5, 1), #TODO: config
             p=1,
             a=self.act_bit,
             w=self.weight_bit,
-            scale_momentum=0.9,
         )
 
         qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(
@@ -111,17 +112,35 @@ class RNIQQuant(BaseQuant):
             lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-            if issubclass(preceding_layer_type, nn.ReLU):
-                qmodule = self._quantize_module(
-                    module, signed_Activations=False)
-            else:
-                qmodule = self._quantize_module(
-                    module, signed_Activations=True)
+            if module.kernel_size != (1,1):
+                print(layer + " " + repr(module.kernel_size))
+                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+                if issubclass(preceding_layer_type, nn.ReLU): #XXX: hack shoul be changed through config
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
+                else:
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
 
-            attrsetter(layer)(qmodel.model, qmodule)
+                attrsetter(layer)(qmodel.model, qmodule)
+
+        if self.config.quantization.freeze_batchnorm:
+            self.freeze_all_batchnorm_layers(qmodel)                
 
         return qmodel
+    
+    def freeze_all_batchnorm_layers(self, model):
+        # Freezes all batch normalization layers in the model. 
+        # This means they won't update running means/variances 
+        # during training and their parameters won't receive gradients.
+        for module in model.modules():
+            # Check for any batch norm variant
+            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                # Switch to evaluation mode (affects running stats)
+                module.eval()
+                # Freeze BN params
+                module.weight.requires_grad = False
+                module.bias.requires_grad = False
 
     @staticmethod
     def noise_ratio(self, x=None):
@@ -188,13 +207,14 @@ class RNIQQuant(BaseQuant):
 
         # targets = self.tmodel(inputs)
         # self.noise_ratio(0.0)
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = RNIQQuant.noisy_step(self, inputs)        
 
         val_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
             metric_value = metric(outputs[0], targets)
             # metric_value = metric(outputs, targets)
             self.log(f"Metric/{name}", metric_value, prog_bar=False)
+            self.log(f"Metric/ns_{name}", metric_value * model_stats.is_converged(self), prog_bar=False) 
 
         # Not very optimal approach. Cycling through model two times..
         self.log(
@@ -203,15 +223,33 @@ class RNIQQuant(BaseQuant):
             prog_bar=False,
         )
         self.log(
+            "Actual weights bit width",
+            model_stats.get_true_weights_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual weights max bit width",
+            model_stats.get_true_weights_width(self.model),
+            prog_bar=False
+        )
+        self.log(
             "Mean activations bit width",
             model_stats.get_activations_bit_width_mean(self.model),
             prog_bar=False,
         )
+        self.log(
+            "Actual activations bit widths",
+            model_stats.get_true_activations_width(self.model, max=False),
+            prog_bar=False
+        )
+        self.log(
+            "Actual activations max bit widths",
+            model_stats.get_true_activations_width(self.model),
+            prog_bar=False
+        )
 
         self.log("Loss/Validation loss", val_loss, prog_bar=False)
-        # idea is to modify val loss during the stage when model is not converged 
-        # to use this metric later for the chckpoint callback
-        self.log("Loss/ns_val_loss", val_loss + (10 * self.noise_ratio()), prog_bar=False) 
+
 
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):
@@ -252,10 +290,13 @@ class RNIQQuant(BaseQuant):
         return qmodule
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
+        disabled = False
+        if self.config.quantization.act_bit == -1 or self.config.quantization.act_bit > 20:
+            disabled = True
         sequence = nn.Sequential(
             OrderedDict(
                 [
-                    ("activations_quantizer", NoisyAct(signed=signed_activations)),
+                    ("activations_quantizer", NoisyAct(signed=signed_activations, disable=disabled)),
                     ("0", qmodule),
                 ]
             )

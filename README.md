@@ -102,6 +102,7 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 | Resnet-20 | CIFAR-10 | RNIQ   | 2  | -  | 91.85%      |
 | Resnet-20 | CIFAR-10 | [link](https://github.com/linkinpark213/quantization-networks-cifar10/tree/master)   | 2  | -  | 91.1%      |
 |           |          |        |    |    |             |
+| Resnet-20 | CIFAR-10 | FP     | -  | -  | 93.89%      |
 | Resnet-20 | CIFAR-10 | [APoT](https://arxiv.org/abs/1909.13144)   | 2  | 2  | 91.0%      |
 | Resnet-20 | CIFAR-10 | RNIQ   | 2  | 2  | 90.88%      |
 

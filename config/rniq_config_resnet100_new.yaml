@@ -1,31 +1,29 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar10_new
+  name: resnet20_cifar100
   params:
     pretrained: True
-    num_classes: 10
+    num_classes: 100
 
 training:
   criterion: CrossEntropyLoss
-  optimizer: RAdam
-  learning_rate: 0.002
+  optimizer: Adam
+  learning_rate: 0.005
   max_epochs: 1000
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
-        name: resnet20-rniq
+        name: resnet20_cifar100-rniq
         note: "Symmetrical KL"
   callbacks:
-    LayersWidthVis:
-      params: {}
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 50
-        min_delta: 0.0001
+        patience: 10
+        min_delta: 0.05
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
@@ -33,10 +31,11 @@ training:
         filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
-        scale_lr: 1
-        warmup: 1000
+        scale: 3.e-4
+        scale_lr: 0.99985
+        warmup: 200
 data:
-  dataset_name: CIFAR10
+  dataset_name: CIFAR100_DALI
   batch_size: 1000
   num_workers: 8
 
@@ -48,11 +47,6 @@ quantization:
   act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
-  freeze_batchnorm: False
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
-  calibration:
-    act_bit: 10
-    weight_bit: 10
-
