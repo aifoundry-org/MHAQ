@@ -1,6 +1,8 @@
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from typing_extensions import override
 
+from src.quantization.rniq.utils import model_stats
+
 
 class NoiseEarlyStopping(EarlyStopping):
     r"""Slightly modified version of EarlyStopping algorithm.
@@ -41,10 +43,10 @@ class NoiseEarlyStopping(EarlyStopping):
         if self.tracking_metric:
             return super().on_train_epoch_end(trainer, pl_module)
 
-        if pl_module._noise_ratio <= 0 and not self.tracking_metric:
+        if model_stats.is_converged(pl_module):
             self._log_info(
                 trainer,
-                f"Noise ratio is {pl_module._noise_ratio}, started tracking metric.",
+                f"Converged, started tracking metric.",
                 self.log_rank_zero_only
             )
             self.tracking_metric = True

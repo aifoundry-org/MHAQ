@@ -1,8 +1,50 @@
 import torch
 
 from torch import Tensor
-from torch.nn.modules import Module 
+from torch.autograd import Function
 
+class QNoise(Function):
+
+    # Note that forward, setup_context, and backward are @staticmethods
+    @staticmethod
+    def forward(input, scale):
+        output = torch.round(input) - input
+        return output
+
+    @staticmethod
+    # inputs is a Tuple of all of the inputs passed to forward.
+    # output is the output of the forward().
+    def setup_context(ctx, inputs, output):
+        input, scale = inputs
+        ctx.save_for_backward(input, scale)
+
+    # This function has only a single output, so it gets only one gradient
+    @staticmethod
+    def backward(ctx, grad_output: Tensor):
+        # This is a pattern that is very convenient - at the top of backward
+        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+        input, scale = ctx.saved_tensors
+        grad_input = grad_scale = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+        if ctx.needs_input_grad[0]:
+            grad_input = grad_output * 0
+        if ctx.needs_input_grad[1]:
+            #grad_scale = grad_output * (torch.round(input) - input)
+            grad_scale = grad_output * (torch.randint(2, size=input.shape, dtype=input.dtype, device=input.device).sub(0.5))
+            #grad_scale = grad_output * torch.normal(0, 0.2888, size=input.shape, dtype=input.dtype, device=input.device)
+            #grad_scale = grad_output * (torch.rand_like(input).sub_(0.5))
+
+        return grad_input, grad_scale
+    
+def scaled_noise(x, s):
+    return QNoise.apply(x, s)
 
 class Quantizer:
     def __init__(
@@ -62,34 +104,21 @@ class Quantizer:
         if self._is_positive_scale():
             value = value / self.scale
 
+            #qnoise = self._get_qnoise(value, self.scale)
+            rnoise = self._get_rnoise(value, self.scale)
 
-        if self.rnoise_ratio.item() == -1.0 or not self._is_positive_scale():
-            # No need to calculate noise at all
-            rnoise = zero_noise
-            qnoise = zero_noise
-        elif self.rnoise_ratio.item() == 0.0:
-            # Disable random noise calculation
-            rnoise = zero_noise
-            qnoise = self._get_qnoise(value)
-        elif self.rnoise_ratio.item() == 1.0:
-            # Disable quantization noise calculation
-            qnoise = zero_noise
-            rnoise = self._get_rnoise(value)
-        else:
-            qnoise = self._get_qnoise(value)
-            rnoise = self._get_rnoise(value)
-
-        noise = self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise
-        
-        value = value + noise.detach()
+            #noise = self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise
+            noise = rnoise
+            
+            value = value + noise
 
         #assert valid values
         if not self.module.training:
-            if self._is_positive_scale() and (torch.any(value < (self.min_val - self.zero_point) / self.scale - 0.5)):
+            if self._is_positive_scale() and (torch.any(value < torch.floor(self.min_val / self.scale))):
                 raise AssertionError("Not all elements in the tensor above min val")
-            if self._is_positive_scale() and (torch.any(value > (self.max_val - self.zero_point) / self.scale + 0.5)):
+            if self._is_positive_scale() and (torch.any(value > torch.ceil(self.max_val / self.scale))):
                 raise AssertionError("Not all elements in the tensor below max val")            
-            if self.rnoise_ratio == 0 and not torch.all(value == value.floor()):
+            if not torch.all((value == value.floor()) | (value == value.ceil())):
                 raise AssertionError("Not all elements in the tensor have integer values.")
         
         return value
@@ -104,8 +133,8 @@ class Quantizer:
 
         return quantized_value + self.zero_point
 
-    def _get_qnoise(self, value: Tensor):
-        return torch.round(value) - value
+    def _get_qnoise(self, value: Tensor, scale: Tensor):
+        return (torch.round(value) - value).detach()
 
-    def _get_rnoise(self, value: Tensor):
-        return torch.randint(2, size=value.shape, dtype=value.dtype, device=value.device).sub(0.5)
+    def _get_rnoise(self, value: Tensor, scale: Tensor):
+        return scaled_noise(value, scale)

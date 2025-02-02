@@ -15,7 +15,7 @@ class ModelConfig(BaseModel):
     params: Dict
 
 class Callback(BaseModel):
-    params: Optional[Dict]
+    params: Optional[Dict] = None
 
 class Logger(BaseModel):
     params: Optional[Dict]
@@ -32,16 +32,23 @@ class TrainingConfig(BaseModel):
     loggers: Optional[Dict[str, Logger]] = []
 
 
+class CalibrationConfig(BaseModel):
+    act_bit: int
+    weight_bit: int
+
 class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    distillation: Optional[bool] = False
+    distillation: Optional[bool] = False    
     distillation_loss: Optional[str] = "Cross-Entropy"
+    distillation_teacher: Optional[str] = None
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
+    calibration: Optional[CalibrationConfig] = None
+    freeze_batchnorm: Optional[bool] = False
 
 
 class DataConfig(BaseModel):

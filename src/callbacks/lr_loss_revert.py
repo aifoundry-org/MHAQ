@@ -46,7 +46,7 @@ class ReduceLrOnOutlier(Callback):
                 logger.warning(
                     f"Loss is too high {self.batch_loss - lp[-1]} > {3 * std}! Reverting epoch, reducing LR by {self.LR_scale}")
                 revert = True
-            elif self.batch_loss - lp[-1] <= 0:
+            elif self.batch_loss - lp[-1] <= std:
                 save = True
         elif trainer.current_epoch == 0:
             save = True

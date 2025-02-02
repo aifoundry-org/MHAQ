@@ -8,7 +8,7 @@ model:
 training:
   criterion: CrossEntropyLoss
   optimizer: Adam
-  learning_rate: 0.00001
+  learning_rate: 0.001
   max_epochs: 40
   val_every_n_epochs: 1
   log_every_n_steps: 100
@@ -19,35 +19,34 @@ training:
         note: "Testing resnet-18 with sym KL loss"
  
   callbacks:
-    NoiseEarlyStopping:
-      params:
-        monitor: Loss/Base train loss
-        mode: min
-        patience: 10
-        min_delta: 0.005
     ModelCheckpoint:
       params:
-        filename: rniq_checkpoint_rsnt18
-    ReduceLrOnOutlier:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+    TemperatureScale:
       params:
-        reduce_scale: 4
-        lr_lim: 0.0003
-    RandNoiseScale:
+        scale_lr: 1
+        warmup: 1000
+    NoiseEarlyStopping:
       params:
-        reduce_scale: 2
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 50
+        min_delta: 0.001
 
 data:
   dataset_name: IMAGENET
   data_dir: ./data/imagenet
-  batch_size: 800
+  batch_size: 1000
   num_workers: 8
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 21
-  weight_bit: 2
+  act_bit: 4
+  weight_bit: 4
   distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:

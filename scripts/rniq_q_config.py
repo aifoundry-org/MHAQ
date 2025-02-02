@@ -20,8 +20,8 @@ def parse_args():
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        # default="config/rniq_config_resnet20_old.yaml"
-        default="config/rniq_config_resnet20_new_4bit.yaml"
+        default="config/rniq_config_resnet20_new.yaml"
+        # default="config/rniq_config_resnet20_new_4bit.yaml"
     )
     return parser.parse_args()
 
@@ -37,16 +37,23 @@ def main():
 
     data = dataset_composer.compose()
     model = model_composer.compose()
+
+    # Validate  model before quantization
+    trainer.validate(model, datamodule=data)
+
     qmodel = quantizer.quantize(model, in_place=True)
 
-    # Test model before quantization
-    trainer.test(model, datamodule=data)
+    # Validate model after layers replacement
+    trainer.validate(qmodel, datamodule=data)
+  
+    # Calibrating model initial weights and scales if defined in config
+    trainer.calibrate(qmodel, datamodule=data)
 
     # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
     # Test model after quantization
-    trainer.test(qmodel, datamodule=data)
+    trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()
