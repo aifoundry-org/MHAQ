@@ -1,4 +1,6 @@
+from collections import OrderedDict
 import lightning.pytorch as pl
+import torch
 import src.models as compose_models
 
 from torch import nn, optim
@@ -27,6 +29,16 @@ class ModelComposer():
             self.criterion = getattr(nn, training_config.criterion)()
             self.optimizer = getattr(optim, training_config.optimizer)
             self.lr = training_config.learning_rate
+
+            if model_config.cpt_url:
+                state_dict = torch.hub.load_state_dict_from_url(model_config.cpt_url)
+                state_dict = state_dict.get('model', state_dict)   
+                try:             
+                    self.model.load_state_dict(state_dict)
+                except:
+                    wrapper = nn.Sequential(OrderedDict([('module', self.model)]))
+                    wrapper.load_state_dict(state_dict)
+
         else:
             assert(self.model)
             assert(self.model_type)
