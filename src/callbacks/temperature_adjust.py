@@ -5,16 +5,18 @@ import torch
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
+from src.quantization.rniq.rniq_quant import RNIQQuant
 from src.quantization.rniq.utils import model_stats
 
 logger = logging.getLogger("lightning.pytorch")
 
 class TemperatureScale(Callback):
-    def __init__(self, scale_anneal=0.9985, scale_lr=1.0, warmup = 50) -> None:
+    def __init__(self, scale_anneal=0.9985, scale_lr=1.0, scale_t=2, warmup = 50) -> None:
         self.scale_anneal = scale_anneal
         self.scale_lr = scale_lr
         self.warmup = warmup
         self.converged = False
+        self.scale_t = scale_t
         super().__init__()
 
 
@@ -36,7 +38,7 @@ class TemperatureScale(Callback):
                 
         pl_module.log("temperature", self.t, prog_bar=True)
 
-        self.t = (self.t + self.lr) if self.total_batch > self.warmup else self.t
+        self.t = (self.t + self.lr * self.scale_t) if self.total_batch > self.warmup else self.t
 
         loss = pl_module.wrapped_criterion
 
