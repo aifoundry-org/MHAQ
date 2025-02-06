@@ -1,8 +1,9 @@
 model:
   type: VISION_CLS
   name: resnet20_cifar10
+  cpt_url: 'file://saved_models_pytorch/cifar10-resnet20_cifar10_from_resnet20_cifar10_new-final_run_92.81.th'
   params:
-    pretrained: True
+    pretrained: False
     num_classes: 10
 
 training:
@@ -16,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "final SKL+random noise"
+        note: "distilled 92.84"
   callbacks:
     LayersWidthVis:
       params: {}
@@ -51,8 +52,8 @@ quantization:
   #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
   excluded_layers:
-    - 'module.linear'
-    - 'module.conv1'
+    - 'linear'
+    - 'conv1'
   calibration:
     act_bit: 10
     weight_bit: 10
