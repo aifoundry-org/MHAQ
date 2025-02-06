@@ -26,8 +26,7 @@ from collections import OrderedDict
 from pytorchcv.model_provider import get_model
 
 weights = {
-    #'resnet20': 'https://github.com/akamaster/pytorch_resnet_cifar10/raw/refs/heads/master/pretrained_models/resnet20-12fca82f.th',
-    'resnet20': 'https://github.com/aifoundry-org/MHAQ/raw/refs/heads/bad_temper/saved_models_pytorch/cifar10_ResNet20v1_best.th',
+    'resnet20': 'https://github.com/akamaster/pytorch_resnet_cifar10/raw/refs/heads/master/pretrained_models/resnet20-12fca82f.th',
     'resnet32':'https://github.com/akamaster/pytorch_resnet_cifar10/raw/refs/heads/master/pretrained_models/resnet32-d509ac18.th',
     'resnet44':'https://github.com/akamaster/pytorch_resnet_cifar10/raw/refs/heads/master/pretrained_models/resnet44-014dd654.th',
     'resnet56':'https://github.com/akamaster/pytorch_resnet_cifar10/raw/refs/heads/master/pretrained_models/resnet44-014dd654.th',
@@ -135,8 +134,8 @@ def resnet20_cifar10(num_classes=10, pretrained=False):
         return ResNet(BasicBlock, [3, 3, 3], num_classes)
     else:
         model = ResNet(BasicBlock, [3, 3, 3], num_classes)
-        model = nn.Sequential(OrderedDict([('module', model)]))
-        model.load_state_dict(torch.hub.load_state_dict_from_url(weights['resnet20'])['state_dict'])
+        wrapper = nn.Sequential(OrderedDict([('module', model)]))
+        wrapper.load_state_dict(torch.hub.load_state_dict_from_url(weights['resnet20'])['state_dict'])
         return model
 
 def resnet20_cifar100(num_classes=100, pretrained=False):
