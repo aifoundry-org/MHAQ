@@ -111,6 +111,7 @@ class Trainer(pl.Trainer):
                     _logger.log_hyperparams(config.dict())
 
             check_val_every_n_epoch = tconfig.val_every_n_epochs
+            val_check_interval = tconfig.val_check_interval
 
         super().__init__(
             accelerator=accelerator,

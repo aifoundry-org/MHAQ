@@ -12,6 +12,7 @@ from typing import Literal, Dict, Optional, List
 class ModelConfig(BaseModel):
     type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "LM"]
     name: str
+    cpt_url: Optional[str] = None
     params: Dict
 
 class Callback(BaseModel):
@@ -26,8 +27,9 @@ class TrainingConfig(BaseModel):
     optimizer: str
     learning_rate: float
     max_epochs: int
-    val_every_n_epochs: int
-    log_every_n_steps: Optional[int] = []
+    val_every_n_epochs: Optional[int] = 1
+    val_check_interval: Optional[float] = None
+    log_every_n_steps: Optional[int] = None
     callbacks: Optional[Dict[str, Callback]] = []
     loggers: Optional[Dict[str, Logger]] = []
 
