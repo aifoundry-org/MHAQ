@@ -54,6 +54,8 @@ quantization:
   excluded_layers:
     - 'linear'
     - 'conv1'
+#     - 'module.linear'
+#     - 'module.conv1'
   calibration:
     act_bit: 10
     weight_bit: 10

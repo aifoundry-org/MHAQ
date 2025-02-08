@@ -41,5 +41,4 @@ class NoisyAct(nn.Module):
             # assume q is int
             minmax = q.aminmax()
             self.bw = torch.log2(minmax.max - minmax.min + 1)
-
         return self.Q.dequantize(q)

@@ -5,6 +5,7 @@ import torch
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
+
 from src.quantization.rniq.rniq_quant import RNIQQuant
 from src.quantization.rniq.utils import model_stats
 

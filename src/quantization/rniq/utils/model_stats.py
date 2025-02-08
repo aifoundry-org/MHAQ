@@ -116,6 +116,7 @@ def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
         bit_width = np.log2(val_count(qweights))
+#         bit_width = np.log2(qweights.unique().numel())
         return bit_width
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
@@ -128,7 +129,6 @@ def get_true_layer_bit_width(module: torch.nn.Module, max=True):
 def val_count(q):
     minmax = q.aminmax()
     return (minmax.max - minmax.min + 1).item()
-
 
 def get_layer_weights_bit_width(
         layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
@@ -181,6 +181,7 @@ def get_true_activations_width(model: torch.nn.Module, max=True):
     bit_widths = []
     for module in act_modules:
         bit_widths.append(module.bw.cpu())
+#         bit_widths.append(module.bw.numpy())
     
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
