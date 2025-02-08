@@ -53,8 +53,7 @@ class Quantizer:
         scale: torch.Tensor,
         zero_point: torch.Tensor,
         min_val: torch.Tensor,
-        max_val: torch.Tensor,
-        rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,])
+        max_val: torch.Tensor
     ) -> None:
         """
         Main quantizer for rniq method.
@@ -64,14 +63,12 @@ class Quantizer:
             zero_point (float): _description_
             min_val (float): _description_
             max_val (float): _description_
-            rnoise_ratio (float): _description_
         """
         self.module = module
         self.scale = scale
         self.zero_point = zero_point  # zero point
         self.min_val = min_val
         self.max_val = max_val
-        self.rnoise_ratio = torch.Tensor([rnoise_ratio])
         self.positive_scale = torch.all(torch.as_tensor(self.scale) > 0).item()
 
 
@@ -90,20 +87,21 @@ class Quantizer:
         if not self.positive_scale:
             return value
             
-        value = value / self.scale
+        value = value / self.scale.to(value)
 
-        noise = self._get_rnoise(value, self.scale)
+        noise = scaled_noise(value, self.scale)
+        #noise = (torch.round(value) - value).detach()
          
         value = value + noise
 
         #assert valid values
-        if not self.module.training:
-            if torch.any(value < torch.floor(self.min_val / self.scale)):
-                raise AssertionError("Not all elements in the tensor above min val")
-            if torch.any(value > torch.ceil(self.max_val / self.scale)):
-                raise AssertionError("Not all elements in the tensor below max val")            
-            if not torch.all((value == value.floor()) | (value == value.ceil())):
-                raise AssertionError("Not all elements in the tensor have integer values.")
+        # if not self.module.training:
+        #     if torch.any(value < torch.floor(self.min_val / self.scale)):
+        #         raise AssertionError("Not all elements in the tensor above min val")
+        #     if torch.any(value > torch.ceil(self.max_val / self.scale)):
+        #         raise AssertionError("Not all elements in the tensor below max val")            
+        #     if not torch.all((value == value.floor()) | (value == value.ceil())):
+        #         raise AssertionError("Not all elements in the tensor have integer values.")
         
         return value
 
@@ -116,7 +114,3 @@ class Quantizer:
             return quantized_value + self.zero_point
             
         return quantized_value * self.scale + self.zero_point
-        
-
-    def _get_rnoise(self, value: Tensor, scale: Tensor):
-        return scaled_noise(value, scale)
