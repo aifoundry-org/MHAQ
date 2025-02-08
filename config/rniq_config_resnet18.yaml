@@ -1,7 +1,7 @@
 model:
   type: VISION_CLS
   name: resnet18
-  cpt_url: "file://saved_models_pytorch/ilsvrc2012-resnet18_from_resnet34.pt"
+  cpt_url: "file://data/models/ilsvrc2012-resnet18_from_resnet34.pt"
   params:
     pretrained: False
     num_classes: 1000
