@@ -81,7 +81,6 @@ class RNIQQuant(BaseQuant):
 
         qmodel.wrapped_criterion = PotentialLoss(
             criterion=self.get_distill_loss(qmodel=qmodel),
-            alpha=(1, 0.5, 1), #TODO: config
             p=1,
             a=self.act_bit,
             w=self.weight_bit,
@@ -125,11 +124,11 @@ class RNIQQuant(BaseQuant):
                 attrsetter(layer)(qmodel.model, qmodule)
 
         if self.config.quantization.freeze_batchnorm:
-            self.freeze_all_batchnorm_layers(qmodel)                
+            RNIQQuant.freeze_all_batchnorm_layers(qmodel)                
 
         return qmodel
     
-    def freeze_all_batchnorm_layers(self, model):
+    def freeze_all_batchnorm_layers(model, freeze=True):
         # Freezes all batch normalization layers in the model. 
         # This means they won't update running means/variances 
         # during training and their parameters won't receive gradients.
@@ -139,8 +138,8 @@ class RNIQQuant(BaseQuant):
                 # Switch to evaluation mode (affects running stats)
                 module.eval()
                 # Freeze BN params
-                module.weight.requires_grad = False
-                module.bias.requires_grad = False
+                module.weight.requires_grad = not freeze
+                module.bias.requires_grad = not freeze
 
     @staticmethod
     def noise_ratio(self, x=None):
