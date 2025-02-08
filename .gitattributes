@@ -1,0 +1,5 @@
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.th filter=lfs diff=lfs merge=lfs -text
+data/models/ilsvrc2012-resnet18_from_resnet34.pt filter=lfs diff=lfs merge=lfs -text
+data/models/cifar10_ResNet20v1_best.th filter=lfs diff=lfs merge=lfs -text
+data/models/cifar10-resnet20_cifar10_from_resnet20_cifar10_new-final_run_92.81.th filter=lfs diff=lfs merge=lfs -text
