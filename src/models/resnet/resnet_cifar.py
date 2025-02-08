@@ -135,8 +135,8 @@ def resnet20_cifar10(num_classes=10, pretrained=False):
         return ResNet(BasicBlock, [3, 3, 3], num_classes)
     else:
         model = ResNet(BasicBlock, [3, 3, 3], num_classes)
-        model = nn.Sequential(OrderedDict([('module', model)]))
-        model.load_state_dict(torch.hub.load_state_dict_from_url(weights['resnet20'])['state_dict'])
+        wrapper = nn.Sequential(OrderedDict([('module', model)]))
+        wrapper.load_state_dict(torch.hub.load_state_dict_from_url(weights['resnet20'])['state_dict'])
         return model
 
 def resnet20_cifar100(num_classes=100, pretrained=False):

@@ -4,14 +4,13 @@ import torch
 
 
 class PotentialLoss(nn.Module):
-    def __init__(self, criterion, alpha=(1, 1, 1),
+    def __init__(self, criterion,
                  p=1,
                  a=8,
                  w=4,
                  lossless=False
                  ) -> None:
         super().__init__()
-        self.alpha = torch.tensor(alpha)
         self.criterion = criterion
         self.s_weight_loss = torch.tensor(0)
         self.s_act_loss = torch.tensor(0)
@@ -51,21 +50,28 @@ class PotentialLoss(nn.Module):
         loss = self.base_loss
 
         z = torch.tensor(0)
-        wloss = (torch.max(z, (lwq - lws) -
-                 (self.wt - self.l_eps)).pow(self.p)).mean()
-        aloss = (torch.max(z, (laq - las) -
-                 (self.at - self.l_eps)).pow(self.p)).mean()
+        wloss0 = (torch.max(z, (lwq - lws) -
+                 (self.wt - self.l_eps)).pow(self.p))
+        wloss = wloss0.mean()
+        wact = (wloss0 > 0).sum() # number of active constraints on weights
+
+        aloss0 = (torch.max(z, (laq - las) -
+                 (self.at - self.l_eps)).pow(self.p))
+        aloss = aloss0.mean()
+        aact = (aloss0 > 0).sum() # number of active constraints on activations
 
         rloss = loss.pow_(self.p)
 
         calib_mul = self.loss_sum / self.cnt
+        wmul = (wact + self.l_eps) / (wact + aact + self.l_eps)
+        amul = (aact + self.l_eps) / (wact + aact + self.l_eps)
 
         l1, l2 = (1.0, self.t) if self.lossless else (self.t, 1.0)
 
-        ploss = calib_mul * l1 * (self.alpha[0] * wloss + self.alpha[1] * aloss) + l2 * self.alpha[2] * rloss
+        ploss = calib_mul * l1 * (wmul * wloss + amul * aloss) + l2 * rloss
 
         if self.training:
-            self.loss_sum += rloss.detach()        
+            self.loss_sum += rloss.detach()
             self.cnt += 1
 
         self.wloss = wloss

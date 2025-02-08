@@ -72,17 +72,8 @@ class Quantizer:
         self.min_val = min_val
         self.max_val = max_val
         self.rnoise_ratio = torch.Tensor([rnoise_ratio])
+        self.positive_scale = torch.all(torch.as_tensor(self.scale) > 0).item()
 
-    def _is_positive_scale(self):
-        """
-        Check if the scale is positive
-        for both float and tensor types.
-        """
-        if isinstance(self.scale, float):
-            return self.scale > 0
-        elif isinstance(self.scale, torch.Tensor):
-            return torch.all(self.scale > 0)
-        return False
 
     def quantize(self, value):
         """
@@ -90,33 +81,26 @@ class Quantizer:
         clamping it to the specified range.
         """
 
-        # This conditions are not essential
-        # Just for sake of opitmization
-
-        zero_noise = torch.zeros_like(value)
-
         # clamp is used only for activations
         # the clamp is before noise beacause adding rounding noise is equivalent to rounding clamp
         value = torch.clamp(value, min=self.min_val, max=self.max_val)
 
         value = value - self.zero_point
 
-        if self._is_positive_scale():
-            value = value / self.scale
-
-            #qnoise = self._get_qnoise(value, self.scale)
-            rnoise = self._get_rnoise(value, self.scale)
-
-            #noise = self.rnoise_ratio * rnoise + (1 - self.rnoise_ratio) * qnoise
-            noise = rnoise
+        if not self.positive_scale:
+            return value
             
-            value = value + noise
+        value = value / self.scale
+
+        noise = self._get_rnoise(value, self.scale)
+         
+        value = value + noise
 
         #assert valid values
         if not self.module.training:
-            if self._is_positive_scale() and (torch.any(value < torch.floor(self.min_val / self.scale))):
+            if torch.any(value < torch.floor(self.min_val / self.scale)):
                 raise AssertionError("Not all elements in the tensor above min val")
-            if self._is_positive_scale() and (torch.any(value > torch.ceil(self.max_val / self.scale))):
+            if torch.any(value > torch.ceil(self.max_val / self.scale)):
                 raise AssertionError("Not all elements in the tensor below max val")            
             if not torch.all((value == value.floor()) | (value == value.ceil())):
                 raise AssertionError("Not all elements in the tensor have integer values.")
@@ -127,14 +111,13 @@ class Quantizer:
         """
         Dequantizes the input value and
         adds the bias back.
-        """
-        if self._is_positive_scale():
-            return quantized_value * self.scale + self.zero_point
+        """        
+        if not self.positive_scale:
+            return quantized_value + self.zero_point
+            
+        return quantized_value * self.scale + self.zero_point
+        
 
-        return quantized_value + self.zero_point
-
-    def _get_qnoise(self, value: Tensor, scale: Tensor):
-        return (torch.round(value) - value).detach()
 
     def _get_rnoise(self, value: Tensor, scale: Tensor):
         return scaled_noise(value, scale)
