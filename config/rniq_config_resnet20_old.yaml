@@ -1,7 +1,7 @@
 model:
   type: VISION_CLS
   name: resnet20_cifar10
-  cpt_url: 'file://saved_models_pytorch/cifar10-resnet20_cifar10_from_resnet20_cifar10_new-final_run_92.81.th'
+  cpt_url: 'file://data/models/cifar10-resnet20_cifar10_from_resnet20_cifar10_new-final_run_92.81.th'
   params:
     pretrained: False
     num_classes: 10
