@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
 
-from resnet_cifar import resnet20_cifar10
+from src.models.resnet.resnet_cifar import resnet20_cifar10
 
 
 # -----------------------------
