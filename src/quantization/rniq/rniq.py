@@ -118,5 +118,6 @@ class Quantizer:
         return quantized_value * self.scale + self.zero_point
         
 
+
     def _get_rnoise(self, value: Tensor, scale: Tensor):
         return scaled_noise(value, scale)

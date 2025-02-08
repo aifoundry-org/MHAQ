@@ -39,16 +39,16 @@ training:
 
 data:
   dataset_name: IMAGENET
-  data_dir: ./data/imagenet/imagenet-object-localization-challenge/ILSVRC/Data/CLS-LOC
-  batch_size: 250
+  data_dir: ./data/imagenet
+  batch_size: 1000
   num_workers: 8
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 32
-  weight_bit: 1
+  act_bit: 4
+  weight_bit: 4
   distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:
