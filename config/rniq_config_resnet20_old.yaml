@@ -45,8 +45,8 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 1
-  act_bit: 1
+  weight_bit: 2
+  act_bit: 2
   distillation: True
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new
