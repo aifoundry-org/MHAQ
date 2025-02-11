@@ -98,19 +98,26 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 ### CIFAR-10
 | Model     | Dataset  | Method | QW | QA | Best Top-1 |
 |-----------|----------|--------|----|----|------------|
-| Resnet-20 | CIFAR-10 | FP     | -  | -  | 91.7%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 2  | -  | 91.85%      |
+| Resnet-20 | CIFAR-10 | FP (finetuned)     | -  | -  | 92.82%      |
+| Resnet-20 | CIFAR-10 | RNIQ   | 1  | 1  | 85.78%      |
+| Resnet-20 | CIFAR-10 | RNIQ   | 1  | 32 | 92.14%      |   
+| Resnet-20 | CIFAR-10 | RNIQ   | 2  | 2  | 91.4%      |
+| Resnet-20 | CIFAR-10 | RNIQ   | 3  | 3  | 92.5%      |
+| Resnet-20 | CIFAR-10 | RNIQ   | 4  | 4  | 92.78%      |
 |           |          |        |    |    |             |
-| Resnet-20 | CIFAR-10 | RNIQ   | 2  | 2  | 90.88%      |
 
 ### CIFAR-100
 | Model     | Dataset   | Method | QW | QA | Best Top-1  |
 |-----------|-----------|--------|----|----|-------------|
 | Resnet-20 | CIFAR-100 | FP     | -  | -  | 70.26%      |
-| Resnet-20 | CIFAR-100 | RNIQ   | 2  | 2  | 60.09%      |
+| Resnet-20 | CIFAR-100 | FP     | 1  | 1  | 56.94%      |
+| Resnet-20 | CIFAR-100 | RNIQ   | 2  | 2  | 66.41%      |
+| Resnet-20 | CIFAR-100 | RNIQ   | 3  | 3  | 69.36%      |
+| Resnet-20 | CIFAR-100 | RNIQ   | 4  | 4  | 70.24%      |
 |           |           |        |    |    |             |
 
 ### IMAGENET-1K
 | Model     | Dataset     | Method | QW | QA | Best Top-1  |
 |-----------|-------------|--------|----|----|-------------|
-| Resnet-18 | IMAGENET-1k | FP     | -  | -  | 69.75%      |
+| Resnet-18 | IMAGENET-1k | FP(finetuned)     | -  | -  | 71.91%      |
+| Resnet-18 | IMAGENET-1k | FP(finetuned)     | 1  | 32  | 66.14%      |
