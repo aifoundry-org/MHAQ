@@ -1,22 +1,23 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar100
+  name: resnet18
+  cpt_url: "file://data/models/ilsvrc2012-resnet18_from_resnet34.pt"
   params:
-    pretrained: True
-    num_classes: 100
+    pretrained: False
+    num_classes: 1000
 
 training:
   criterion: CrossEntropyLoss
   optimizer: RAdam
-  learning_rate: 0.002
-  max_epochs: 1500
-  val_every_n_epochs: 2
-  log_every_n_steps: 10
+  learning_rate: 0.0005
+  max_epochs: 40
+  val_check_interval: 0.25
+  log_every_n_steps: 100
   loggers:
     WandbLogger:
       params:
-        name: resnet20_cifar100-rniq
-        note: "Sym KL loss"
+        name: resnet18-rniq
+        note: "distilled 71.93"
  
   callbacks:
     ModelCheckpoint:
@@ -27,18 +28,20 @@ training:
     TemperatureScale:
       params:
         scale_lr: 1
+        scale_anneal: 0.999
         warmup: 1000
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 50
-        min_delta: 0.0001
+        patience: 5
+        min_delta: 0.001
 
 data:
-  dataset_name: CIFAR100
+  dataset_name: IMAGENET
+  data_dir: ./data/imagenet
   batch_size: 1000
-  num_workers: 10
+  num_workers: 8
 
 
 quantization:
@@ -49,8 +52,8 @@ quantization:
   distillation: True
   distillation_loss: Symmetrical KL
   excluded_layers:
-    - 'features.init_block.conv'
-    - 'output'
+    - 'conv1'
+    - 'fc'
   calibration:
     act_bit: 10
     weight_bit: 10

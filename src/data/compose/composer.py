@@ -10,6 +10,7 @@ class DatasetComposer:
         self.batch_size: int
         self.num_workers: int
         self.dataset_name: str
+        self.data_dir: str
 
     def compose(self) -> pl.LightningDataModule:
         if self.config:
@@ -17,15 +18,17 @@ class DatasetComposer:
             self.dataset_name = data_config.dataset_name
             self.batch_size = data_config.batch_size
             self.num_workers = data_config.num_workers
+            self.data_dir = data_config.data_dir
         else:
             assert self.dataset_name
             assert self.batch_size
             assert self.num_workers
-        
-        
+
         try:
             dataset = getattr(vision, self.dataset_name)(
-            batch_size=self.batch_size, num_workers=self.num_workers
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                data_dir=self.data_dir,
             )
         except AttributeError as e:
             raise AttributeError(f"{e}, available datasets are {vision.__all__}")

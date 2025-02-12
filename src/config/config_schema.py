@@ -12,10 +12,11 @@ from typing import Literal, Dict, Optional, List
 class ModelConfig(BaseModel):
     type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "LM"]
     name: str
+    cpt_url: Optional[str] = None
     params: Dict
 
 class Callback(BaseModel):
-    params: Optional[Dict]
+    params: Optional[Dict] = None
 
 class Logger(BaseModel):
     params: Optional[Dict]
@@ -26,22 +27,30 @@ class TrainingConfig(BaseModel):
     optimizer: str
     learning_rate: float
     max_epochs: int
-    val_every_n_epochs: int
-    log_every_n_steps: Optional[int] = []
+    val_every_n_epochs: Optional[int] = 1
+    val_check_interval: Optional[float] = None
+    log_every_n_steps: Optional[int] = None
     callbacks: Optional[Dict[str, Callback]] = []
     loggers: Optional[Dict[str, Logger]] = []
 
+
+class CalibrationConfig(BaseModel):
+    act_bit: int
+    weight_bit: int
 
 class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    distillation: Optional[bool] = False
+    distillation: Optional[bool] = False    
     distillation_loss: Optional[str] = "Cross-Entropy"
+    distillation_teacher: Optional[str] = None
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
+    calibration: Optional[CalibrationConfig] = None
+    freeze_batchnorm: Optional[bool] = False
 
 
 class DataConfig(BaseModel):
@@ -49,6 +58,7 @@ class DataConfig(BaseModel):
     batch_size: int
     num_workers: int
     augmentations: Optional[List[str]] = None
+    data_dir: Optional[str] = "./data"
 
 
 class ConfigSchema(BaseModel):

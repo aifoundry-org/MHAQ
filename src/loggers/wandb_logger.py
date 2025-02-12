@@ -25,7 +25,7 @@ class WandbLogger(pl_loggers.WandbLogger):
     ) -> None:
         version = (
             str(uuid.uuid4())[:6] + "_" +
-            datetime.now().strftime("%Y-%m-%d %H_%M")
+            datetime.now().strftime("%Y-%m-%d_%H_%M")
         )
         name = name + "_" + str(uuid.uuid4())[:6]
         project = "MHAQ"
