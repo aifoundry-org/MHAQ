@@ -209,13 +209,6 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
 
 
 def get_activations_bit_width(log_q, log_s, b):
-    #s = torch.pow(2, log_s.ravel())
-    #q = torch.pow(2, log_q.ravel())
-    #zero_point = torch.zeros(1).to(s.device)
-    #ql, qm = b - q / 2, b + q / 2
-    #Q = Quantizer(s, zero_point, ql, qm)
-    #Q.rnoise_ratio = torch.tensor([0]).to(s.device)
-    #return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
     return (log_q - log_s).mean()
 
 def is_converged(model):

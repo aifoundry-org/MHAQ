@@ -54,7 +54,6 @@ class Quantizer:
         zero_point: torch.Tensor,
         min_val: torch.Tensor,
         max_val: torch.Tensor,
-        rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,])
     ) -> None:
         """
         Main quantizer for rniq method.
@@ -64,14 +63,12 @@ class Quantizer:
             zero_point (float): _description_
             min_val (float): _description_
             max_val (float): _description_
-            rnoise_ratio (float): _description_
         """
         self.module = module
         self.scale = scale
         self.zero_point = zero_point  # zero point
         self.min_val = min_val
         self.max_val = max_val
-        self.rnoise_ratio = torch.Tensor([rnoise_ratio])
         self.positive_scale = torch.all(torch.as_tensor(self.scale) > 0).item()
 
 

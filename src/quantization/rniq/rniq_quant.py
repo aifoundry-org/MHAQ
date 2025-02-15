@@ -73,7 +73,6 @@ class RNIQQuant(BaseQuant):
         )
 
         # The part where original LModule structure gets changed
-        qmodel._noise_ratio = torch.tensor(1.0)
         qmodel.qscheme = self.qscheme
 
         if self.config.quantization.distillation:
@@ -85,9 +84,6 @@ class RNIQQuant(BaseQuant):
             a=self.act_bit,
             w=self.weight_bit,
         )
-
-        qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(
-            qmodel, type(qmodel))
 
         # Important step. Replacing training and validation steps
         # with alternated ones.
@@ -140,14 +136,6 @@ class RNIQQuant(BaseQuant):
                 # Freeze BN params
                 module.weight.requires_grad = not freeze
                 module.bias.requires_grad = not freeze
-
-    @staticmethod
-    def noise_ratio(self, x=None):
-        if x != None:
-            for module in self.modules():
-                if hasattr(module, "_noise_ratio"):
-                    module._noise_ratio.data = x.clone().detach()
-        return self._noise_ratio
 
     @staticmethod  # yes, it's a static method with self argument
     def noisy_step(self, x):
@@ -205,7 +193,6 @@ class RNIQQuant(BaseQuant):
         inputs, targets = val_batch
 
         # targets = self.tmodel(inputs)
-        # self.noise_ratio(0.0)
         outputs = RNIQQuant.noisy_step(self, inputs)        
 
         val_loss = self.criterion(outputs[0], targets)
@@ -253,7 +240,6 @@ class RNIQQuant(BaseQuant):
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):
         inputs, targets = test_batch
-        # self.noise_ratio(0.0)
         outputs = RNIQQuant.noisy_step(self, inputs)
 
         test_loss = self.criterion(outputs[0], targets)
