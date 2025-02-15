@@ -19,7 +19,6 @@ class ReduceLrOnOutlier(Callback):
         self.lr_lim = lr_lim
         self.model_state = None
         self.optimizer_state = None
-        self.noise_ratio = 1.0
         super().__init__()
 
     def on_fit_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -54,13 +53,11 @@ class ReduceLrOnOutlier(Callback):
         if save:
             self.model_state = deepcopy(trainer.model.state_dict())
             self.optimizer_state = deepcopy(trainer.optimizers[0].state_dict())
-            self.noise_ratio = pl_module._noise_ratio.detach().clone()
 
         if revert:
             trainer.model.load_state_dict(self.model_state)
             trainer.optimizers[0].load_state_dict(self.optimizer_state)
             self.change_lr(pl_module, trainer, pl_module.lr / self.LR_scale)
-            pl_module.noise_ratio(self.noise_ratio)
         else:
             # exponent growth
             # self.epoch_mean_loss.append(self.batch_loss)
@@ -71,7 +68,7 @@ class ReduceLrOnOutlier(Callback):
             self.epoch_mean_loss.append(self.batch_loss)
             eta = self.q_loss * 1e-4
             hscale = 1 + (eta * (self.lr_lim - pl_module.lr) / pl_module.lr)
-            scale = hscale if self.q_loss > 1e-3 or pl_module._noise_ratio > 1e-3 else 0.98
+            scale = hscale if self.q_loss > 1e-3 else 0.98
             self.change_lr(pl_module, trainer, pl_module.lr * scale)
 
         self.batch_loss = 0
