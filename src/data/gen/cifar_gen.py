@@ -24,7 +24,7 @@ def normalize_batch_to_unit_range(batch: torch.Tensor) -> torch.Tensor:
     mins = batch.quantile(0.01)
     maxs = batch.quantile(0.99)
     denom = (maxs - mins).clamp(min=1e-6)
-    return (batch - mins) / denom
+    return ((batch - mins) / denom).clamp(0, 1).mul(255).round()
 
 
 def tv_loss(f):
@@ -57,14 +57,15 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     #class_id = args.class_id
     batch_size = 484
-    num_steps = 484
+    num_steps = 1000
     sigma = 1
     lr = 0.02
     beta = 10.
     l_inv = 1e-7  # deepinverse regularization weight
     l_tv = 1e-5  # image total variation regularization weight
     l_tv_f = 2e-9  # feature total variation regularization weight
-    output_dir = 'output'
+    # output_dir = 'output/test'
+    output_dir = 'output/train'
     file_format = "pkl"
     prefix = "data_batch"
     os.makedirs(output_dir, exist_ok=True)
@@ -102,8 +103,11 @@ def main():
     # 2. Load CIFAR-100 subset
     transform = transforms.ToTensor()
     cifar100 = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
+    # cifar100_test = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
     #indices = [i for i, (_, y) in enumerate(cifar_raw) if y == class_id]
     #subset = Subset(cifar_raw, indices)
+
+    # loader = DataLoader(cifar100_test, batch_size=batch_size, shuffle=True, generator=g)
     loader = DataLoader(cifar100, batch_size=batch_size, shuffle=True, generator=g)
     
     
