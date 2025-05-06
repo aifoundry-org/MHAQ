@@ -7,8 +7,8 @@ import torch.nn as nn
 
 import numpy as np
 from tqdm import trange
-from torch.utils.data import DataLoader, Subset
-from torchvision import datasets, transforms, utils
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 from pytorchcv.model_provider import get_model
 
 
@@ -103,11 +103,7 @@ def main():
     # 2. Load CIFAR-100 subset
     transform = transforms.ToTensor()
     cifar100 = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
-    # cifar100_test = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
-    #indices = [i for i, (_, y) in enumerate(cifar_raw) if y == class_id]
-    #subset = Subset(cifar_raw, indices)
 
-    # loader = DataLoader(cifar100_test, batch_size=batch_size, shuffle=True, generator=g)
     loader = DataLoader(cifar100, batch_size=batch_size, shuffle=True, generator=g)
     
     
@@ -122,7 +118,6 @@ def main():
 
         # !labels should be random for magic to work
         targets = labels.to(device)
-        #target = F.softmax(model(img_norm), dim=1)
 
         # 5. Initialize reconstruction
         x0 = torch.randn_like(img_raw_batch).to(device)
@@ -144,7 +139,6 @@ def main():
                 tv_f_reg += feat[1]
 
             loss = F.cross_entropy(out, targets)
-            #loss  = F.kl_div(F.log_softmax(out, dim=1) , target, reduction='batchmean')
             tv_reg = tv_loss(x)
             total_loss = loss + l_tv * tv_reg + l_tv_f * tv_f_reg  + l_inv * torch.sqrt(bn_reg)
 
@@ -170,14 +164,9 @@ def main():
         print(f"Saved batch {batch_idx} to {path}")
         batch_paths.append(path)
 
-            
-
-        # 7. Remove hooks
-        # for h in hooks.values():
-            # h.remove()
-
         print(f"Optimization complete. Results saved in {output_dir}/")
 
+
+
 if __name__ == '__main__':
-    torch.autograd.set_detect_anomaly(True)
     main()
