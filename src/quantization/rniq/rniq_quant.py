@@ -112,7 +112,8 @@ class RNIQQuant(BaseQuant):
             lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            if module.kernel_size != (1,1):
+            # if module.kernel_size != (1,1):
+            if True:
                 print(layer + " " + repr(module.kernel_size))
                 preceding_layer_type = layer_types[layer_names.index(layer) - 1]
                 following_layer_type = layer_types[layer_names.index(layer) + 1]
@@ -172,8 +173,6 @@ class RNIQQuant(BaseQuant):
         conv.bias = nn.Parameter(beta + (b - mu) * scale)
 
         attrsetter(bn_name)(model, nn.Identity())
-
-
 
     @staticmethod
     def noise_ratio(self, x=None):

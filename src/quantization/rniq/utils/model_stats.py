@@ -7,13 +7,13 @@ from src.loggers.default_logger import logger
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
-#from src.quantization.rniq.rniq import Quantizer
+
+# from src.quantization.rniq.rniq import Quantizer
 
 
 class ModelStats:
     def __init__(self, model: torch.nn.Module):
-        self.named_params = {name: p for name,
-                             p in model.cpu().named_parameters()}
+        self.named_params = {name: p for name, p in model.cpu().named_parameters()}
         self.modules = [(name, m) for name, m in model.cpu().named_modules()]
         self.noisy_layers = [
             m for _, m in self.modules if isinstance(m, (NoisyLinear, NoisyConv2d))
@@ -53,8 +53,7 @@ class ModelStats:
             ("min", torch.min),
             ("max", torch.max),
         ]:
-            stats[stat_name] = {name: stat_func(
-                p) for name, p in param_values.items()}
+            stats[stat_name] = {name: stat_func(p) for name, p in param_values.items()}
         return stats
 
     def _compute_module_stats(self, module_condition):
@@ -83,7 +82,6 @@ class ModelStats:
         return self._compute_module_stats(
             lambda m: isinstance(m, (NoisyLinear, NoisyConv2d))
         )
-    
 
     def print_stats(self):
         weights_stats = self._get_module_weight_stats
@@ -96,13 +94,11 @@ class ModelStats:
                 "Model weights abs mean, std",
                 zip(weights_stats()[0], weights_stats()[1]),
             ),
-            ("Model weights abs min, max", zip(
-                weights_stats()[2], weights_stats()[3])),
+            ("Model weights abs min, max", zip(weights_stats()[2], weights_stats()[3])),
             (
                 "Model weights bit_width",
                 [
-                    (i[0], get_activations_bit_width(
-                        torch.log2(i[1]) + 1, j[1], 0))
+                    (i[0], get_activations_bit_width(torch.log2(i[1]) + 1, j[1], 0))
                     for i, j in zip(weights_stats()[3], self._get_s_weights())
                 ],
             ),
@@ -112,26 +108,36 @@ class ModelStats:
             for name, value in values:
                 logger.debug(f"{name}: {value}")
 
+
 def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
         bit_width = np.log2(val_count(qweights))
-#         bit_width = np.log2(qweights.unique().numel())
+        #         bit_width = np.log2(qweights.unique().numel())
         return bit_width
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
         qweights = module.Q.quantize(module.weight.detach())
-        reshaped = qweights.permute(channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]).reshape(qweights.size(channel_dim), -1)
+        reshaped = qweights.permute(
+            channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]
+        ).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(val_count(channel))) for channel in reshaped]
         return np.max(bit_widths) if max else np.mean(bit_widths)
 
-# much faster than unique    
+
+# much faster than unique
 def val_count(q):
     minmax = q.aminmax()
     return (minmax.max - minmax.min + 1).item()
 
-def get_layer_weights_bit_width(
-        layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
+
+def get_layer_wnb_bit_width(
+    layer_weights: torch.Tensor,
+    log_s: torch.Tensor,
+    # layer_bias: torch.Tensor | None = None,
+    # log_b_s: torch.Tensor | None = None,
+    config=QScheme.PER_TENSOR,
+):
     # add 0.5 bit gap to prevent overflow
     if config == QScheme.PER_TENSOR:
         min = layer_weights.amin()
@@ -141,7 +147,7 @@ def get_layer_weights_bit_width(
         max = layer_weights.amax((1, 2, 3))
 
     # add 1 lsb gap to prevent overflow
-    log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))        
+    log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))
 
     return get_activations_bit_width(log_q, log_s, 0)
 
@@ -170,7 +176,7 @@ def get_true_weights_width(model: torch.nn.Module, max=True):
     for module in lin_layers:
         layer_bw = get_true_layer_bit_width(module)
         bit_widths.append(layer_bw)
-    
+
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
@@ -181,8 +187,8 @@ def get_true_activations_width(model: torch.nn.Module, max=True):
     bit_widths = []
     for module in act_modules:
         bit_widths.append(module.bw.cpu())
-#         bit_widths.append(module.bw.numpy())
-    
+    #         bit_widths.append(module.bw.numpy())
+
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
@@ -193,6 +199,8 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
     bit_widths = []
     for module in lin_layers:
         weight = module.weight.detach()
+        if module.bias is not None:
+            bias = module.bias.detach()
 
         # we are not quantizing bias therefore noo need to include it
         # weight = (
@@ -200,7 +208,7 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
         # if module.bias is None
         # else torch.cat((module.weight.detach().reshape(-1), module.bias.detach()))
         # )
-        layer_bw = get_layer_weights_bit_width(
+        layer_bw = get_layer_wnb_bit_width(
             weight, module.log_wght_s.detach(), module.qscheme
         )
         if not torch.isnan(layer_bw):
@@ -209,17 +217,20 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
 
 
 def get_activations_bit_width(log_q, log_s, b):
-    #s = torch.pow(2, log_s.ravel())
-    #q = torch.pow(2, log_q.ravel())
-    #zero_point = torch.zeros(1).to(s.device)
-    #ql, qm = b - q / 2, b + q / 2
-    #Q = Quantizer(s, zero_point, ql, qm)
-    #Q.rnoise_ratio = torch.tensor([0]).to(s.device)
-    #return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
+    # s = torch.pow(2, log_s.ravel())
+    # q = torch.pow(2, log_q.ravel())
+    # zero_point = torch.zeros(1).to(s.device)
+    # ql, qm = b - q / 2, b + q / 2
+    # Q = Quantizer(s, zero_point, ql, qm)
+    # Q.rnoise_ratio = torch.tensor([0]).to(s.device)
+    # return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
     return (log_q - log_s).mean()
+
 
 def is_converged(model):
     loss = model.wrapped_criterion
-    converged = get_true_weights_width(model) <= loss.wt and  get_true_activations_width(model) <= loss.at
+    converged = (
+        get_true_weights_width(model) <= loss.wt
+        and get_true_activations_width(model) <= loss.at
+    )
     return converged
-
