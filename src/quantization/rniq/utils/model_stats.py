@@ -112,17 +112,21 @@ class ModelStats:
 def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
+        qbiases = module.Q_b.quantize(module.bias.detach())
         bit_width = np.log2(val_count(qweights))
+        bias_bw = np.log2(val_count(qbiases))
         #         bit_width = np.log2(qweights.unique().numel())
-        return bit_width
+        return (bit_width + bias_bw) / 2
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
         qweights = module.Q.quantize(module.weight.detach())
+        qbiases = module.Q_b.quantize(module.bias.detach())
         reshaped = qweights.permute(
             channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]
         ).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(val_count(channel))) for channel in reshaped]
-        return np.max(bit_widths) if max else np.mean(bit_widths)
+        bias_bw = np.log2(val_count(qbiases))
+        return (np.max(bit_widths) + np.max(bias_bw)) / 2 if max else (np.mean(bit_widths) + np.mean(bias_bw)) / 2
 
 
 # much faster than unique
@@ -134,22 +138,29 @@ def val_count(q):
 def get_layer_wnb_bit_width(
     layer_weights: torch.Tensor,
     log_s: torch.Tensor,
-    # layer_bias: torch.Tensor | None = None,
-    # log_b_s: torch.Tensor | None = None,
+    layer_bias: torch.Tensor | None = None,
+    log_b_s: torch.Tensor | None = None,
     config=QScheme.PER_TENSOR,
 ):
     # add 0.5 bit gap to prevent overflow
     if config == QScheme.PER_TENSOR:
         min = layer_weights.amin()
         max = layer_weights.amax()
+
+        min_b = layer_bias.amin()
+        max_b = layer_bias.amax()
     elif config == QScheme.PER_CHANNEL:
         min = layer_weights.amin((1, 2, 3))
         max = layer_weights.amax((1, 2, 3))
 
+        min_b = layer_bias.amin()
+        max_b = layer_bias.amax()
+
     # add 1 lsb gap to prevent overflow
     log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))
+    log_q_b = torch.log2((max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
 
-    return get_activations_bit_width(log_q, log_s, 0)
+    return (get_activations_bit_width(log_q, log_s, 0) + get_activations_bit_width(log_q_b, log_b_s, 0)) / 2
 
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
@@ -208,9 +219,13 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
         # if module.bias is None
         # else torch.cat((module.weight.detach().reshape(-1), module.bias.detach()))
         # )
+        # layer_bw = get_layer_wnb_bit_width(
+            # weight, module.log_wght_s.detach(), module.qscheme
+        # )
         layer_bw = get_layer_wnb_bit_width(
-            weight, module.log_wght_s.detach(), module.qscheme
+            weight, module.log_wght_s.detach(),bias, module.log_b_s.detach(), module.qscheme
         )
+
         if not torch.isnan(layer_bw):
             bit_widths.append(layer_bw.mean())
     return torch.stack(bit_widths).mean()

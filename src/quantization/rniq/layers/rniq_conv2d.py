@@ -50,7 +50,7 @@ class NoisyConv2d(nn.Conv2d):
                 torch.empty((out_channels, 1, 1, 1)).fill_(log_s_init),
                 requires_grad=True,
             )
-            self.log_b_s = nn.Parameter(torch.empty(out_channels).fill_(log_s_init), 
+            self.log_b_s = nn.Parameter(torch.empty(1).fill_(log_s_init), 
                                         requires_grad=True)
         self._noise_ratio = torch.nn.Parameter(torch.Tensor([1]), requires_grad=False)
         self.Q = Quantizer(self, torch.exp2(self.log_wght_s), 0, -inf, inf)
@@ -61,23 +61,24 @@ class NoisyConv2d(nn.Conv2d):
         s = torch.exp2(self.log_wght_s)
         s_b = torch.exp2(self.log_b_s)
         self.Q.scale = s
-        # self.Q_b.scale = s_b
+        self.Q_b.scale = s_b
         self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
-        # self.Q_b.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
+        self.Q_b.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
         if self.qscheme == QScheme.PER_CHANNEL:
             min = self.weight.amin((1,2,3),keepdim=True)
-            min_b = torch.zeros_like(self.bias)
+            min_b = self.bias.amin()
         elif self.qscheme == QScheme.PER_TENSOR:
             min = self.weight.amin()
+            min_b = self.bias.amin()
         self.Q.zero_point = min
-        # self.Q_b.zero_point = min_b
+        self.Q_b.zero_point = min_b
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
-        # bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
+        bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
 
-        return self._conv_forward(input, weight, self.bias)
-        # return self._conv_forward(input, weight, bias)
+        # return self._conv_forward(input, weight, self.bias)
+        return self._conv_forward(input, weight, bias)
 
     def extra_repr(self) -> str:
         bias = is_biased(self)
