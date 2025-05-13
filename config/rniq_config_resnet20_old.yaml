@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "distilled 92.84"
+        note: "distilled 92.84 NO_BN, bias quant"
   callbacks:
     LayersWidthVis:
       params: {}
@@ -45,8 +45,8 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 2
-  act_bit: 2
+  weight_bit: 4
+  act_bit: 4
   distillation: True
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new

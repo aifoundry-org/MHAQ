@@ -112,21 +112,19 @@ class ModelStats:
 def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
-        qbiases = module.Q_b.quantize(module.bias.detach())
         bit_width = np.log2(val_count(qweights))
-        bias_bw = np.log2(val_count(qbiases))
-        #         bit_width = np.log2(qweights.unique().numel())
-        return (bit_width + bias_bw) / 2
+        return bit_width
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
         qweights = module.Q.quantize(module.weight.detach())
-        qbiases = module.Q_b.quantize(module.bias.detach())
+        # qbiases = module.Q_b.quantize(module.bias.detach())
         reshaped = qweights.permute(
             channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]
         ).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(val_count(channel))) for channel in reshaped]
-        bias_bw = np.log2(val_count(qbiases))
-        return (np.max(bit_widths) + np.max(bias_bw)) / 2 if max else (np.mean(bit_widths) + np.mean(bias_bw)) / 2
+        # bias_bw = np.log2(val_count(qbiases))
+        # return (np.max(bit_widths) + np.max(bias_bw)) / 2 if max else (np.mean(bit_widths) + np.mean(bias_bw)) / 2
+        return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
 # much faster than unique

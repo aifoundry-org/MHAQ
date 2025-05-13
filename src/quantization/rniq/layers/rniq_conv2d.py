@@ -61,7 +61,8 @@ class NoisyConv2d(nn.Conv2d):
         s = torch.exp2(self.log_wght_s)
         s_b = torch.exp2(self.log_b_s)
         self.Q.scale = s
-        self.Q_b.scale = s_b
+        # self.Q_b.scale = s_b
+        self.Q_b.scale = s.ravel()
         self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
         self.Q_b.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
@@ -72,7 +73,8 @@ class NoisyConv2d(nn.Conv2d):
             min = self.weight.amin()
             min_b = self.bias.amin()
         self.Q.zero_point = min
-        self.Q_b.zero_point = min_b
+        # self.Q_b.zero_point = min_b
+        self.Q_b.zero_point = min.ravel()
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
         bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
