@@ -11,7 +11,7 @@ from src.training.trainer import Trainer
 from src.quantization.dummy.dummy_quant import DummyQuant
 from src.models.compose.composer import ModelComposer
 from src.data.compose.vision import CIFAR10
-from src.data.compose.object_detection import VOC
+from src.data.compose.vision.od import VOC2012
 
 
 # Model composer section
@@ -35,8 +35,8 @@ trainer = Trainer(max_epochs=20,
 
 # Dataset section
 # data = CIFAR10()
-data = VOC()
-data.batch_size = 1
+data = VOC2012()
+data.batch_size = 10
 data.num_workers = 0
 
 data.prepare_data()
