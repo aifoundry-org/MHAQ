@@ -1,0 +1,1 @@
+YOLO_FAMILY = ["YOLOV11"]

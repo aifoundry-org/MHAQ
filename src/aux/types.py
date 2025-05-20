@@ -2,12 +2,16 @@ from enum import Enum
 
 class DType(Enum):
     VISION_CLS = 1
+    VISION_SR = 2
+    VISION_DNS = 3
+    VISION_OD = 4
 
 class MType(Enum):
     # Vision-based model types
     VISION_CLS = 1
     VISION_SR = 2
     VISION_DNS = 3
+    VISION_OD = 4
     
     # Language-based model types
     LM = 10
