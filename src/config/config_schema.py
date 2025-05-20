@@ -10,7 +10,7 @@ from typing import Literal, Dict, Optional, List
 
 
 class ModelConfig(BaseModel):
-    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "LM"]
+    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "VISION_OD", "LM"]
     name: str
     cpt_url: Optional[str] = None
     params: Dict
@@ -23,7 +23,7 @@ class Logger(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    criterion: str
+    criterion: str | List[str]
     optimizer: str
     learning_rate: float
     max_epochs: int
