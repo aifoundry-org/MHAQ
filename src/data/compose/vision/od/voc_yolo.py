@@ -63,12 +63,12 @@ class YOLOTargetTransform:
             return torch.zeros((0,5), dtype=torch.float32)
         return torch.tensor(boxes, dtype=torch.float32)
 
-class YOLOVOCDataModule2012(pl.LightningDataModule):
+class YOLOVOCDataModule(pl.LightningDataModule):
     def __init__(
         self, data_dir: str = "./data", batch_size=1000, num_workers=5
     ) -> None:
         super().__init__()
-        self.year = "2012"
+        self.year = None
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -150,3 +150,13 @@ class YOLOVOCDataModule2012(pl.LightningDataModule):
             prefetch_factor=5,
             shuffle=self.shuffle,
         )
+
+class YOLOVOCDataModule2012(YOLOVOCDataModule):
+    def __init__(self, data_dir = "./data", batch_size=1000, num_workers=5):
+        super().__init__(data_dir, batch_size, num_workers)
+        self.year = "2012"
+
+class YOLOVOCDataModule2007(YOLOVOCDataModule):
+    def __init__(self, data_dir = "./data", batch_size=1000, num_workers=5):
+        super().__init__(data_dir, batch_size, num_workers)
+        self.year = "2007"
