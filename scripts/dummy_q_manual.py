@@ -11,6 +11,7 @@ from src.training.trainer import Trainer
 from src.quantization.dummy.dummy_quant import DummyQuant
 from src.models.compose.composer import ModelComposer
 from src.data.compose.vision import CIFAR10
+from src.data.compose.vision.od import VOC2012
 
 
 # Model composer section
@@ -22,9 +23,9 @@ composer.model_type = MType.VISION_CLS
 composer.lr = 0.001
 
 # Model quantizer section
-quantizer = DummyQuant()
-quantizer.weight_bit = 0
-quantizer.act_bit = 0
+# quantizer = DummyQuant()
+# quantizer.weight_bit = 0
+# quantizer.act_bit = 0
 
 # Model trainer section
 callbacks = [ModelCheckpoint(filename="dummy_checkpoint_rsnt18")]
@@ -33,13 +34,19 @@ trainer = Trainer(max_epochs=20,
                   callbacks=callbacks)
 
 # Dataset section
-data = CIFAR10()
-data.batch_size_train = 2000
-data.num_workers = 10
+# data = CIFAR10()
+data = VOC2012()
+data.batch_size = 10
+data.num_workers = 0
 
+data.prepare_data()
+
+data.setup("train")
+
+pass
 # Composing section
-model = composer.compose()
-qmodel = quantizer.quantize(model)
+# model = composer.compose()
+# qmodel = quantizer.quantize(model)
 
 # Training section
-trainer.fit(qmodel, data)
+# trainer.fit(qmodel, data)
