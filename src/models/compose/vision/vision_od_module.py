@@ -4,7 +4,7 @@ import torchmetrics
 import lightning.pytorch as pl
 from typing import Any, Dict
 from src.models.od import YOLO_FAMILY
-from src.models.od.yolo_loss import ComputeYoloLoss
+from src.models.od.loss.yolo_loss import ComputeYoloLoss
 
 import torchmetrics.detection
 
