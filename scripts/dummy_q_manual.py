@@ -13,7 +13,7 @@ from src.training.trainer import Trainer
 from src.quantization.dummy.dummy_quant import DummyQuant
 from src.models.compose.composer import ModelComposer
 from src.data.compose.vision import CIFAR10
-from src.data.compose.vision.od import VOC2012
+from src.data.compose.vision.od import VOC2012, COCO
 
 
 # Model composer section
@@ -40,7 +40,8 @@ trainer = Trainer(max_epochs=20,
 
 # Dataset section
 # data = CIFAR10()
-data = VOC2012()
+# data = VOC2012()
+data = COCO()
 data.batch_size = 50
 data.num_workers = 5
 
@@ -55,4 +56,4 @@ model = composer.compose()
 
 # Training section
 # trainer.fit(qmodel, data)
-trainer.fit(model, data)
+# trainer.fit(model, data)
