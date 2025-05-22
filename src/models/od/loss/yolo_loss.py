@@ -277,8 +277,8 @@ class ComputeYoloLoss:
         anchor_points, stride_tensor = make_anchors(outputs, self.stride, offset=0.5)
 
         idx = targets['idx'].view(-1, 1)
-        cls = targets['cls'].view(-1, 1)
-        box = targets['box']
+        cls = targets['labels'].view(-1, 1) # cls
+        box = targets['boxes'] # box
 
         targets = torch.cat((idx, cls, box), dim=1).to(self.device)
         if targets.shape[0] == 0:

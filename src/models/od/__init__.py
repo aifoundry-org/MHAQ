@@ -17,4 +17,4 @@ __all__ = [
     "yolo_v11_x",
 ]
 
-YOLO_FAMILY = ["YOLOV11", *__all__]
+YOLO_FAMILY = ["YOLO", *__all__]
