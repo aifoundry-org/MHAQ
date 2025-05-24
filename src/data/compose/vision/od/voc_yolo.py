@@ -31,7 +31,8 @@ def collate_fn(batch: List[Tuple[Tensor, Tensor]]) -> Tuple[Tensor, Tensor]:
 
 
 class YOLOTargetTransform:
-    def __init__(self, img_size: Tuple[int, int]):
+    def __init__(self, img_size: Tuple[int, int], validation=False):
+        self.validation = validation # when train, it's cxcywh, when validating int xyxy
         self.img_size = img_size
 
     def __call__(self, target: Dict) -> torch.Tensor:
@@ -49,13 +50,16 @@ class YOLOTargetTransform:
             ymin = float(b["ymin"])
             xmax = float(b["xmax"])
             ymax = float(b["ymax"])
-            # center, width, height
-            xc = ((xmin + xmax) / 2) / w_img
-            yc = ((ymin + ymax) / 2) / h_img
-            bw = (xmax - xmin) / w_img
-            bh = (ymax - ymin) / h_img
+            if self.validation:
+                boxes.append([xmin, ymin, xmax, ymax])
+            else:
+                # center, width, height
+                xc = ((xmin + xmax) / 2) / w_img
+                yc = ((ymin + ymax) / 2) / h_img
+                bw = (xmax - xmin) / w_img
+                bh = (ymax - ymin) / h_img
+                boxes.append([xc, yc, bw, bh])
             # boxes.append([cls_idx, xc, yc, bw, bh])
-            boxes.append([xc, yc, bw, bh])
             labels.append(cls_idx)
             indices.append(i)
         if not boxes:
@@ -91,7 +95,8 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             ]
         )
 
-        self.target_transform = YOLOTargetTransform((self.img_size, self.img_size))
+        self.train_target_transform = YOLOTargetTransform((self.img_size, self.img_size))
+        self.val_target_transform = YOLOTargetTransform((self.img_size, self.img_size), validation=True)
 
     def prepare_data(self):
         VOCDetection(
@@ -106,7 +111,7 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             image_set="train",
             download=False,
             transform=self.transform_train,
-            target_transform=self.target_transform
+            target_transform=self.train_target_transform
         )
 
         self.voc_test = VOCDetection(
@@ -115,7 +120,7 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             image_set="val",
             download=False,
             transform=self.transform_train,
-            target_transform=self.target_transform
+            target_transform=self.val_target_transform
         )
 
     def train_dataloader(self):

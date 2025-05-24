@@ -4,11 +4,34 @@ import zipfile
 import torch
 
 from torchvision.datasets import CocoDetection
+from torchvision.datasets import wrap_dataset_for_transforms_v2
+from torchvision.transforms import v2
 from lightning import pytorch as pl
-from torchvision import transforms
+from torchvision import transforms, tv_tensors
+from typing import Tuple, Dict
 
 from torch.utils.data import DataLoader
 
+
+class BBoxNormalizationTransform(torch.nn.Module):
+    def forward(self, img, label):
+        if not "boxes" in label:
+            label.update(
+                {
+                    "boxes": tv_tensors.BoundingBoxes(
+                        [],
+                        device=img.device,
+                        format="XYXY",
+                        canvas_size=(tuple(img.size()[1::])),
+                    )
+                }
+            )
+            return img, label
+
+        label["boxes"][:, [0, 2]] /= label["boxes"].canvas_size[0]
+        label["boxes"][:, [1, 3]] /= label["boxes"].canvas_size[1]
+
+        return img, label
 
 class COCODataModule(pl.LightningDataModule):
     COCO_URLS = {
@@ -27,18 +50,23 @@ class COCODataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.shuffle = False
         self.img_size = 640
+        self.cat2idx = []
 
-        self.transform_train = transforms.Compose(
+        self.transform_train = v2.Compose(
             [
-                transforms.Resize((self.img_size, self.img_size)),
-                transforms.ToTensor(),
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Resize((self.img_size, self.img_size)),
+                v2.ConvertBoundingBoxFormat("CXCYWH"),
+                BBoxNormalizationTransform(),
             ]
         )
 
-        self.transform_test = transforms.Compose(
+        self.transform_test = v2.Compose(
             [
-                transforms.Resize((self.img_size, self.img_size)),
-                transforms.ToTensor(),
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Resize((self.img_size, self.img_size)),
             ]
         )
 
@@ -63,7 +91,11 @@ class COCODataModule(pl.LightningDataModule):
             annFile=os.path.join(
                 self.data_dir, "annotations", "instances_train2017.json"
             ),
-            transform=self.transform_train,
+            transforms=self.transform_train,
+        )
+        self.train_dataset = wrap_dataset_for_transforms_v2(
+            self.train_dataset,
+            target_keys=["boxes", "labels", "image_id", "category_id", "bbox"],
         )
 
         self.val_dataset = CocoDetection(
@@ -71,21 +103,39 @@ class COCODataModule(pl.LightningDataModule):
             annFile=os.path.join(
                 self.data_dir, "annotations", "instances_val2017.json"
             ),
-            transform=self.transform_test,
+            transforms=self.transform_test,
+        )
+        self.val_dataset = wrap_dataset_for_transforms_v2(
+            self.val_dataset, target_keys=["boxes", "labels"]
         )
 
+        self.cat2idx = self.val_dataset.coco.getCatIds()
+    
     def collate_fn(self, batch):
         images, targets = zip(*batch)
-        images = list(images)
-        targets = [{k: torch.tensor(v) for k, v in t.items()} for t in targets]
+        images = torch.stack(images, dim=0)           # assumes equal H×W
 
-        return images, targets
+        out = []
+        for idx, t in enumerate(targets):
+            if len(t.get("labels", [])) == 0:         # nothing annotated => skip
+                continue
+
+            labels = torch.tensor([self.cat2idx.index(l) for l in t["labels"]],
+                                dtype=torch.long)
+
+            out.append({
+                "boxes":  t["boxes"],
+                "labels": labels,
+                "idx":    torch.full((labels.size(0),), idx, dtype=torch.long)
+            })
+
+        return images, out
 
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )

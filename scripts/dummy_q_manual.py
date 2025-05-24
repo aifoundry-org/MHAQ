@@ -20,7 +20,9 @@ from src.data.compose.vision.od import VOC2012, COCO
 composer = ModelComposer()
 params = {"box": 7.5, "cls": 0.5, "dfl": 1.5}
 # composer.model = resnet18(num_classes=10)
-composer.model = yolo_v11_n(20).cuda()
+# composer.model = yolo_v11_n(20).cuda()
+composer.model = yolo_v11_n(80).cuda()
+# composer.model = yolo_v11_n(80)
 composer.criterion = ComputeYoloLoss(composer.model, params)
 composer.optimizer = optim.Adam
 composer.model_type = MType.VISION_OD
@@ -40,8 +42,10 @@ trainer = Trainer(max_epochs=20,
 
 # Dataset section
 # data = CIFAR10()
+
 # data = VOC2012()
 data = COCO()
+
 data.batch_size = 50
 data.num_workers = 5
 
@@ -52,8 +56,9 @@ data.setup("train")
 # pass
 # Composing section
 model = composer.compose()
+batch = next(iter(data.train_dataloader()))
 # qmodel = quantizer.quantize(model)
 
 # Training section
 # trainer.fit(qmodel, data)
-# trainer.fit(model, data)
+trainer.fit(model, data)
