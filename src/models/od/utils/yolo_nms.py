@@ -14,7 +14,8 @@ def wh2xy(x):
 
 def non_max_suppression(outputs, confidence_threshold=0.001, iou_threshold=0.65):
     max_wh = 7680
-    max_det = 300
+    # max_det = 300
+    max_det = 100
     max_nms = 30000
 
     bs = outputs.shape[0]  # batch size

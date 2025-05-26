@@ -5,13 +5,38 @@ import lightning.pytorch as pl
 from typing import Any, Dict
 from src.models.od import YOLO_FAMILY
 from src.models.od.loss.yolo_loss import ComputeYoloLoss
-from src.models.od.utils.yolo_nms import non_max_suppression
-from src.models.od.utils.yolo_decode import decode_yolo_nms
+from src.models.od.utils.yolo_nms import non_max_suppression, wh2xy
+from src.models.od.utils.yolo_decode import decode_yolo_nms, compute_metric, compute_ap
 
 import torchmetrics.detection
 
+import numpy as np
+
 
 logger = logging.getLogger("lightning.pytorch")
+
+def transform_coco_outputs(coco_outputs):
+    return [
+        torch.cat((
+            b,
+            s.unsqueeze(1),
+            l.unsqueeze(1).float()
+        ), dim=1)
+        for o in coco_outputs
+        for b,s,l in [(o['boxes'],o['scores'],o['labels'])]
+    ]
+
+def transform_coco_targets(coco_targets):
+    idx,cls,box = [],[],[]
+    for i,t in enumerate(coco_targets):
+        n = t['labels'].size(0)
+        idx.append(torch.full((n,), i))
+        cls.append(t['labels'].view(-1,1).float())
+        xy  = (t['boxes'][:,:2] + t['boxes'][:,2:]) / 2   # → (N,2): x_center,y_center
+        wh  = t['boxes'][:,2:] - t['boxes'][:,:2]        # → (N,2): w,h
+        box = torch.cat((xy, wh), dim=1) 
+        # box.append(t['boxes'][:,2:]-t['boxes'][:,:2])
+    return {'idx':torch.cat(idx), 'cls':torch.cat(cls), 'box':box}
 
 
 class LVisionOD(pl.LightningModule):
@@ -32,8 +57,14 @@ class LVisionOD(pl.LightningModule):
         self.metrics = []
 
         self.lr = setup["lr"]
+        self._map = []
+        self._metrics = []
 
         self._init_metrics()
+    
+    def on_validation_end(self):
+        print(np.mean(self._map))
+        return super().on_validation_end()
 
     def on_load_checkpoint(self, checkpoint: dict) -> None:
         state_dict = checkpoint["state_dict"]
@@ -97,10 +128,34 @@ class LVisionOD(pl.LightningModule):
         else:
             output = self.forward(inputs)
             val_loss = self.criterion(output, target)
+        
+        # iou_v = torch.linspace(start=0.5, end=0.95, steps=10)
+        # n_iou = iou_v.numel()
 
+        # outputs = transform_coco_outputs(output)
+        # targets = transform_coco_targets(target)
+        # metrics = []
+        # for i,o in enumerate(outputs):
+        #     m = torch.zeros(o.size(0), n_iou, dtype=torch.bool, device='cuda')
+        #     mask = targets['idx']==i
+        #     c = targets['cls'][mask]
+        #     b = targets['box'][mask]
+        #     if o.size(0)==0:
+        #         if c.numel(): metrics.append((m, *[torch.zeros((2,0))], c.squeeze(-1)))
+        #         continue
+        #     if c.numel():
+        #         m = compute_metric(o[:,:6], torch.cat((c, wh2xy(b)*1),1), iou_v)
+        #     metrics.append((m.cpu(), o[:,4].cpu(), o[:,5].cpu(), c.squeeze(-1).cpu()))
+
+
+
+        # metrics = [torch.cat(x, dim=0).cpu().numpy() for x in zip(*metrics)]
         map_value = self.mAP(output, target)
-        self.log(f"mAP@1", map_value["map"], prog_bar=True)
-        self.log(f"mAP@50", map_value["map_50"], prog_bar=False)
+        # tp, fp, m_pre, m_rec, map50, mean_ap = compute_ap(*metrics)
+        # if len(metrics) and metrics[0].any():
+        #     self._map.append(mean_ap)
+        self.log(f"mAP@[.5:.95]", map_value["map"], prog_bar=True, on_epoch=True, batch_size=5)
+        self.log(f"mAP@0.5", map_value["map_50"], prog_bar=False, on_epoch=True, batch_size=5)
 
         # self.log("val_loss", val_loss, prog_bar=False)
 

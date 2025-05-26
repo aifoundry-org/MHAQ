@@ -106,7 +106,7 @@ class COCODataModule(pl.LightningDataModule):
             transforms=self.transform_test,
         )
         self.val_dataset = wrap_dataset_for_transforms_v2(
-            self.val_dataset, target_keys=["boxes", "labels"]
+            self.val_dataset, target_keys=["boxes", "labels", "area", "iscrowd"]
         )
 
         self.cat2idx = self.val_dataset.coco.getCatIds()
@@ -117,15 +117,19 @@ class COCODataModule(pl.LightningDataModule):
 
         out = []
         for idx, t in enumerate(targets):
-            if len(t.get("labels", [])) == 0:         # nothing annotated => skip
-                continue
+            boxes = t.get("boxes", torch.empty((0, 4)))
+            area = torch.tensor(t.get("area", []))
+            iscrowd = torch.tensor(t.get("iscrowd", []))
+            labels = t.get("labels", torch.empty((0,), dtype=torch.long, device=images.device))
+            labels = torch.tensor([self.cat2idx.index(l) for l in labels])
 
-            labels = torch.tensor([self.cat2idx.index(l) for l in t["labels"]],
-                                dtype=torch.long)
-
+            # labels = torch.tensor([self.cat2idx.index(l) for l in t["labels"]],
+                                # dtype=torch.long)
             out.append({
-                "boxes":  t["boxes"],
+                "boxes":  boxes,
                 "labels": labels,
+                "area": area,
+                "iscrowd": iscrowd,
                 "idx":    torch.full((labels.size(0),), idx, dtype=torch.long)
             })
 
@@ -147,6 +151,8 @@ class COCODataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
+            persistent_workers=True,
+            pin_memory=True
         )
 
     def test_dataloader(self):
