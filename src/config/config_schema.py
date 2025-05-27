@@ -69,8 +69,8 @@ class ConfigSchema(BaseModel):
 
     @field_validator("training")
     def validate_training(cls, v):
-        if not hasattr(nn, v.criterion):
-            raise ValueError(f"Invalid criterion: {v.criterion}")
+        # if not hasattr(nn, v.criterion):
+            # raise ValueError(f"Invalid criterion: {v.criterion}")
         if not hasattr(optim, v.optimizer):
             raise ValueError(f"Invalid optimizer: {v.optimizer}")
         for callback in v.callbacks:

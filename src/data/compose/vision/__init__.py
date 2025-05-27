@@ -8,6 +8,7 @@ from .cls.cifar100_gen import CIFAR100GenDataModule as CIFAR100_GEN
 from .cls.imagenet_dali import ImageNetDALIDataModule as IMAGENET_DALI
 
 from .od.voc_yolo import YOLOVOCDataModule2012 as VOC2012_YOLO
+from .od.coco import COCODataModule as COCO
 
 __all__ = [
     "MNIST",
@@ -18,5 +19,6 @@ __all__ = [
     "CIFAR100_GEN",
     "IMAGENET",
     "IMAGENET_DALI",
-    "VOC2012_YOLO"
+    "VOC2012_YOLO",
+    "COCO"
 ]

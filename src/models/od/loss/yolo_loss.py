@@ -232,12 +232,14 @@ class Assigner(torch.nn.Module):
         return target_bboxes, target_scores, fg_mask.bool()
 
 
-class ComputeYoloLoss:
-    def __init__(self, model, params):
+class ComputeYoloLoss(torch.nn.Module):
+    def __init__(self, model, params, device="cuda:0"):
+    # def __init__(self, model, params):
+        super().__init__()
         if hasattr(model, 'module'):
             model = model.module
 
-        device = next(model.parameters()).device
+        # device = next
 
         m = model.head  # Head() module
 
@@ -249,10 +251,12 @@ class ComputeYoloLoss:
         self.device = device
 
         self.box_loss = BoxLoss(m.ch - 1).to(device)
+        # self.box_loss = BoxLoss(m.ch - 1)
         self.cls_loss = torch.nn.BCEWithLogitsLoss(reduction='none')
         self.assigner = Assigner(nc=self.nc, top_k=10, alpha=0.5, beta=6.0)
 
         self.project = torch.arange(m.ch, dtype=torch.float, device=device)
+        # self.project = torch.arange(m.ch, dtype=torch.float)
 
     def box_decode(self, anchor_points, pred_dist):
         b, a, c = pred_dist.shape
@@ -274,6 +278,7 @@ class ComputeYoloLoss:
         data_type = pred_scores.dtype
         batch_size = pred_scores.shape[0]
         input_size = torch.tensor(outputs[0].shape[2:], device=self.device, dtype=data_type) * self.stride[0]
+        # input_size = torch.tensor(outputs[0].shape[2:], dtype=data_type) * self.stride[0]
         anchor_points, stride_tensor = make_anchors(outputs, self.stride, offset=0.5)
 
         idx = targets['idx'].view(-1, 1)
@@ -281,13 +286,16 @@ class ComputeYoloLoss:
         box = targets['boxes'] # box
 
         targets = torch.cat((idx, cls, box), dim=1).to(self.device)
+        # targets = torch.cat((idx, cls, box), dim=1)
         if targets.shape[0] == 0:
             gt = torch.zeros(batch_size, 0, 5, device=self.device)
+            # gt = torch.zeros(batch_size, 0, 5)
         else:
             i = targets[:, 0]
             _, counts = i.unique(return_counts=True)
             counts = counts.to(dtype=torch.int32)
             gt = torch.zeros(batch_size, counts.max(), 5, device=self.device)
+            # gt = torch.zeros(batch_size, counts.max(), 5)
             for j in range(batch_size):
                 matches = i == j
                 n = matches.sum()
@@ -317,7 +325,9 @@ class ComputeYoloLoss:
 
         # Box loss
         loss_box = torch.zeros(1, device=self.device)
+        # loss_box = torch.zeros(1)
         loss_dfl = torch.zeros(1, device=self.device)
+        # loss_dfl = torch.zeros(1)
         if fg_mask.sum():
             target_bboxes /= stride_tensor
             loss_box, loss_dfl = self.box_loss(pred_distri,

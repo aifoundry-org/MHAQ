@@ -7,6 +7,7 @@ from src.models.od import YOLO_FAMILY
 from src.models.od.loss.yolo_loss import ComputeYoloLoss
 from src.models.od.utils.yolo_nms import non_max_suppression, wh2xy
 from src.models.od.utils.yolo_decode import decode_yolo_nms, compute_metric, compute_ap
+from src.models.od.metrics.map_metrics import MeanAveragePrecisionYolo
 
 import torchmetrics.detection
 
@@ -14,29 +15,6 @@ import numpy as np
 
 
 logger = logging.getLogger("lightning.pytorch")
-
-def transform_coco_outputs(coco_outputs):
-    return [
-        torch.cat((
-            b,
-            s.unsqueeze(1),
-            l.unsqueeze(1).float()
-        ), dim=1)
-        for o in coco_outputs
-        for b,s,l in [(o['boxes'],o['scores'],o['labels'])]
-    ]
-
-def transform_coco_targets(coco_targets):
-    idx,cls,box = [],[],[]
-    for i,t in enumerate(coco_targets):
-        n = t['labels'].size(0)
-        idx.append(torch.full((n,), i))
-        cls.append(t['labels'].view(-1,1).float())
-        xy  = (t['boxes'][:,:2] + t['boxes'][:,2:]) / 2   # → (N,2): x_center,y_center
-        wh  = t['boxes'][:,2:] - t['boxes'][:,:2]        # → (N,2): w,h
-        box = torch.cat((xy, wh), dim=1) 
-        # box.append(t['boxes'][:,2:]-t['boxes'][:,:2])
-    return {'idx':torch.cat(idx), 'cls':torch.cat(cls), 'box':box}
 
 
 class LVisionOD(pl.LightningModule):
@@ -48,7 +26,7 @@ class LVisionOD(pl.LightningModule):
             self.criterion = ComputeYoloLoss(
                 self.model, params
             )  # TODO carefull when passing quantizaed model!!
-            self.mAP = torchmetrics.detection.MeanAveragePrecision(box_format="xyxy")
+            self.mAP = MeanAveragePrecisionYolo(box_format="xyxy")
         else:
             self.criterion = setup["criterion"]
             self.mAP = torchmetrics.detection.MeanAveragePrecision(box_format="xyxy")
@@ -118,13 +96,6 @@ class LVisionOD(pl.LightningModule):
         output = self.forward(inputs)
         if self.model._get_name() in YOLO_FAMILY:
             output = self.forward(inputs)
-            output = non_max_suppression(output)
-            output = decode_yolo_nms(output)
-            # loss_box, loss_cls, loss_dfl = self.criterion(output, target)
-            # self.log("val_loss_box", loss_box, prog_bar=False)
-            # self.log("val_loss_cls", loss_cls, prog_bar=False)
-            # self.log("val_loss_dfl", loss_dfl, prog_bar=False)
-            # val_loss = loss_box + loss_cls + loss_dfl
         else:
             output = self.forward(inputs)
             val_loss = self.criterion(output, target)
@@ -157,9 +128,9 @@ class LVisionOD(pl.LightningModule):
         self.log(f"mAP@[.5:.95]", map_value["map"], prog_bar=True, on_epoch=True, batch_size=5)
         self.log(f"mAP@0.5", map_value["map_50"], prog_bar=False, on_epoch=True, batch_size=5)
 
-        # self.log("val_loss", val_loss, prog_bar=False)
 
     def test_step(self, test_batch, test_index):
+        raise NotImplementedError("Test is not yet implemented for OD networks!")
         inputs, target = test_batch
         outputs = self.forward(inputs)
         if self.model._get_name() in YOLO_FAMILY:

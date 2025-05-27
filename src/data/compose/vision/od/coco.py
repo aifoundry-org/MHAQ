@@ -12,6 +12,28 @@ from typing import Tuple, Dict
 
 from torch.utils.data import DataLoader
 
+def transform_coco_outputs(coco_outputs):
+    return [
+        torch.cat((
+            b,
+            s.unsqueeze(1),
+            l.unsqueeze(1).float()
+        ), dim=1)
+        for o in coco_outputs
+        for b,s,l in [(o['boxes'],o['scores'],o['labels'])]
+    ]
+
+def transform_coco_targets(coco_targets):
+    idx,cls,box = [],[],[]
+    for i,t in enumerate(coco_targets):
+        n = t['labels'].size(0)
+        idx.append(torch.full((n,), i))
+        cls.append(t['labels'].view(-1,1).float())
+        xy  = (t['boxes'][:,:2] + t['boxes'][:,2:]) / 2   # → (N,2): x_center,y_center
+        wh  = t['boxes'][:,2:] - t['boxes'][:,:2]        # → (N,2): w,h
+        box = torch.cat((xy, wh), dim=1) 
+        # box.append(t['boxes'][:,2:]-t['boxes'][:,:2])
+    return {'idx':torch.cat(idx), 'cls':torch.cat(cls), 'box':box}
 
 class BBoxNormalizationTransform(torch.nn.Module):
     def forward(self, img, label):
@@ -19,7 +41,7 @@ class BBoxNormalizationTransform(torch.nn.Module):
             label.update(
                 {
                     "boxes": tv_tensors.BoundingBoxes(
-                        [],
+                        torch.empty((0, 4)),
                         device=img.device,
                         format="XYXY",
                         canvas_size=(tuple(img.size()[1::])),
