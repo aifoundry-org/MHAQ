@@ -10,8 +10,8 @@ training:
   optimizer: RAdam
   learning_rate: 0.0005
   max_epochs: 40
-  val_check_interval: 0.25
-  log_every_n_steps: 100
+  val_every_n_epochs: 2
+  log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
@@ -39,7 +39,7 @@ training:
 data:
   dataset_name: COCO
   data_dir: ./data/
-  batch_size: 20
+  batch_size: 24
   num_workers: 8
 
 
@@ -51,6 +51,7 @@ quantization:
   distillation: False
   distillation_loss: Symmetrical KL
   excluded_layers:
+    - 'net.p1.0.conv'
     - 'head.cls.2.4'
     - 'head.box.2.2'
     - 'head.dfl.conv'

@@ -20,7 +20,7 @@ def parse_args():
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        default="config/rniq_config_resnet20_new.yaml"
+        default="config/rniq_config_yolo11.yaml"
         # default="config/rniq_config_resnet20_new_4bit.yaml"
     )
     return parser.parse_args()
@@ -47,7 +47,7 @@ def main():
     trainer.validate(qmodel, datamodule=data)
   
     # Calibrating model initial weights and scales if defined in config
-    trainer.calibrate(qmodel, datamodule=data)
+    # trainer.calibrate(qmodel, datamodule=data)
 
     # Finetune model
     trainer.fit(qmodel, datamodule=data)
