@@ -98,9 +98,9 @@ class Quantizer:
 
         #assert valid values
         if not self.module.training:
-            if torch.any(value < torch.floor(self.min_val / self.scale)):
+            if torch.any(value < torch.floor((self.min_val - self.zero_point) / self.scale)):
                 raise AssertionError("Not all elements in the tensor above min val")
-            if torch.any(value > torch.ceil(self.max_val / self.scale)):
+            if torch.any(value > torch.ceil((self.max_val - self.zero_point) / self.scale)):
                 raise AssertionError("Not all elements in the tensor below max val")            
             if not torch.all((value == value.floor()) | (value == value.ceil())):
                 raise AssertionError("Not all elements in the tensor have integer values.")

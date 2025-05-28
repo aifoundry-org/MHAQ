@@ -21,9 +21,9 @@ training:
   callbacks:
     ModelCheckpoint:
       params:
-        monitor: Metric/mAP@[.5:.95]
+        monitor: mAP@[.5:.95]
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/mAP@[.5:.95]:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{mAP@[.5:.95]:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -31,7 +31,7 @@ training:
         warmup: 1000
     NoiseEarlyStopping:
       params:
-        monitor: Metric/mAP@[.5:.95]
+        monitor: mAP@[.5:.95]
         mode: max
         patience: 5
         min_delta: 0.001

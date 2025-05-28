@@ -1,5 +1,8 @@
 import os
 import sys
+import resource
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
 import argparse
 
