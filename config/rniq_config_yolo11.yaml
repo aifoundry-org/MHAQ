@@ -10,7 +10,7 @@ training:
   optimizer: RAdam
   learning_rate: 0.0005
   max_epochs: 40
-  val_every_n_epochs: 2
+  val_every_n_epochs: 1
   log_every_n_steps: 10
   loggers:
     WandbLogger:
@@ -21,9 +21,9 @@ training:
   callbacks:
     ModelCheckpoint:
       params:
-        monitor: mAP@[.5:.95]
+        monitor: mAP
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{mAP@[.5:.95]:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{mAP:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -31,7 +31,7 @@ training:
         warmup: 1000
     NoiseEarlyStopping:
       params:
-        monitor: mAP@[.5:.95]
+        monitor: mAP
         mode: max
         patience: 5
         min_delta: 0.001

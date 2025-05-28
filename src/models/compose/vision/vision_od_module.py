@@ -41,7 +41,7 @@ class LVisionOD(pl.LightningModule):
         self._init_metrics()
     
     def on_validation_end(self):
-        print(np.mean(self._map))
+        # print(np.mean(self._map))
         return super().on_validation_end()
 
     def on_load_checkpoint(self, checkpoint: dict) -> None:
@@ -125,8 +125,8 @@ class LVisionOD(pl.LightningModule):
         # tp, fp, m_pre, m_rec, map50, mean_ap = compute_ap(*metrics)
         # if len(metrics) and metrics[0].any():
         #     self._map.append(mean_ap)
-        self.log(f"mAP@[.5:.95]", map_value["map"], prog_bar=True, on_epoch=True, batch_size=5)
-        self.log(f"mAP@0.5", map_value["map_50"], prog_bar=False, on_epoch=True, batch_size=5)
+        self.log(f"mAP", map_value["map"], prog_bar=True, on_epoch=True, batch_size=5)
+        self.log(f"mAP_50", map_value["map_50"], prog_bar=False, on_epoch=True, batch_size=5)
 
 
     def test_step(self, test_batch, test_index):
