@@ -3,9 +3,9 @@ import torch
 from torch import nn
 
 from src.aux.types import QScheme
-from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
-from src.quantization.rniq.layers.rniq_linear import NoisyLinear
-from src.quantization.rniq.layers.rniq_act import NoisyAct
+from src.quantization.gdnsk.layers.gdnsk_conv2d import NoisyConv2d
+from src.quantization.gdnsk.layers.gdnsk_linear import NoisyLinear
+from src.quantization.gdnsk.layers.gdnsk_act import NoisyAct
 
 class ModelHelper:
     @staticmethod

@@ -12,7 +12,7 @@ from src.training.trainer import Trainer
 
 torch.set_float32_matmul_precision('high')
 
-config = load_and_validate_config("config/rniq_config_resnet20_vis.yaml")
+config = load_and_validate_config("config/gdnsk_config_resnet20_vis.yaml")
 composer = ModelComposer(config=config)
 quantizer = Quantizer(config=config)()
 trainer = Trainer(config=config)

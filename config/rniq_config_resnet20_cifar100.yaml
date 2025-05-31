@@ -15,7 +15,7 @@ training:
   loggers:
     WandbLogger:
       params:
-        name: resnet20_cifar100-rniq
+        name: resnet20_cifar100-gdnsk
         note: "Sym KL loss"
  
   callbacks:
@@ -23,7 +23,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+        filename: gdnsk_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -42,7 +42,7 @@ data:
 
 
 quantization:
-  name: RNIQQuant
+  name: gdnskQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 4
   weight_bit: 4

@@ -6,8 +6,8 @@ from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
 
-from src.quantization.rniq.rniq_quant import RNIQQuant
-from src.quantization.rniq.utils import model_stats
+from src.quantization.gdnsk.gdnsk_quant import gdnskQuant
+from src.quantization.gdnsk.utils import model_stats
 
 logger = logging.getLogger("lightning.pytorch")
 

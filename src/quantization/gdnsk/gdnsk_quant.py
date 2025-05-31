@@ -4,12 +4,12 @@ import torch
 
 from src.models.resnet.resnet_cifar import resnet20_cifar10_new
 from src.quantization.abc.abc_quant import BaseQuant
-from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
-from src.quantization.rniq.layers.rniq_linear import NoisyLinear
-from src.quantization.rniq.layers.rniq_act import NoisyAct
-from src.quantization.rniq.utils.model_helper import ModelHelper
-from src.quantization.rniq.rniq_loss import PotentialLoss
-from src.quantization.rniq.utils import model_stats
+from src.quantization.gdnsk.layers.gdnsk_conv2d import NoisyConv2d
+from src.quantization.gdnsk.layers.gdnsk_linear import NoisyLinear
+from src.quantization.gdnsk.layers.gdnsk_act import NoisyAct
+from src.quantization.gdnsk.utils.model_helper import ModelHelper
+from src.quantization.gdnsk.gdnsk_loss import PotentialLoss
+from src.quantization.gdnsk.utils import model_stats
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
@@ -24,7 +24,7 @@ from operator import attrgetter
 from collections import OrderedDict
 
 
-class RNIQQuant(BaseQuant):
+class gdnskQuant(BaseQuant):
     def module_mappings(self):
         return {
             nn.Conv2d: NoisyConv2d,
@@ -86,24 +86,24 @@ class RNIQQuant(BaseQuant):
             w=self.weight_bit,
         )
 
-        qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(
+        qmodel.noise_ratio = gdnskQuant.noise_ratio.__get__(
             qmodel, type(qmodel))
 
         # Important step. Replacing training and validation steps
         # with alternated ones.
         if self.config.quantization.distillation:
-            qmodel.training_step = RNIQQuant.distillation_noisy_training_step.__get__(
+            qmodel.training_step = gdnskQuant.distillation_noisy_training_step.__get__(
                 qmodel, type(qmodel)
             )
         else:
-            qmodel.training_step = RNIQQuant.noisy_training_step.__get__(
+            qmodel.training_step = gdnskQuant.noisy_training_step.__get__(
                 qmodel, type(qmodel)
             )
 
-        qmodel.validation_step = RNIQQuant.noisy_validation_step.__get__(
+        qmodel.validation_step = gdnskQuant.noisy_validation_step.__get__(
             qmodel, type(qmodel)
         )
-        qmodel.test_step = RNIQQuant.noisy_test_step.__get__(
+        qmodel.test_step = gdnskQuant.noisy_test_step.__get__(
             qmodel, type(qmodel))
 
         # Replacing layers directly
@@ -124,7 +124,7 @@ class RNIQQuant(BaseQuant):
                 attrsetter(layer)(qmodel.model, qmodule)
 
         if self.config.quantization.freeze_batchnorm:
-            RNIQQuant.freeze_all_batchnorm_layers(qmodel)                
+            gdnskQuant.freeze_all_batchnorm_layers(qmodel)                
 
         return qmodel
     
@@ -157,7 +157,7 @@ class RNIQQuant(BaseQuant):
     @staticmethod
     def distillation_noisy_training_step(self, batch, batch_idx):
         inputs, targets = batch
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = gdnskQuant.noisy_step(self, inputs)
 
         self.tmodel.eval()
         fp_outputs = self.tmodel(inputs)
@@ -182,7 +182,7 @@ class RNIQQuant(BaseQuant):
     @staticmethod
     def noisy_training_step(self, batch, batch_idx):
         inputs, targets = batch
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = gdnskQuant.noisy_step(self, inputs)
         loss = self.wrapped_criterion(outputs, targets)
 
         self.log("Loss/Train loss", loss, prog_bar=True)
@@ -206,7 +206,7 @@ class RNIQQuant(BaseQuant):
 
         # targets = self.tmodel(inputs)
         # self.noise_ratio(0.0)
-        outputs = RNIQQuant.noisy_step(self, inputs)        
+        outputs = gdnskQuant.noisy_step(self, inputs)        
 
         val_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
@@ -254,7 +254,7 @@ class RNIQQuant(BaseQuant):
     def noisy_test_step(self, test_batch, test_index):
         inputs, targets = test_batch
         # self.noise_ratio(0.0)
-        outputs = RNIQQuant.noisy_step(self, inputs)
+        outputs = gdnskQuant.noisy_step(self, inputs)
 
         test_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:

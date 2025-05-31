@@ -1,7 +1,7 @@
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from typing_extensions import override
 
-from src.quantization.rniq.utils import model_stats
+from src.quantization.gdnsk.utils import model_stats
 
 
 class NoiseEarlyStopping(EarlyStopping):

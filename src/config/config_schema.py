@@ -42,7 +42,7 @@ class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
-    qmethod: QMethod = QMethod.RNIQ
+    qmethod: QMethod = QMethod.gdnsk
     distillation: Optional[bool] = False    
     distillation_loss: Optional[str] = "Cross-Entropy"
     distillation_teacher: Optional[str] = None

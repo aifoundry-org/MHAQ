@@ -2,8 +2,8 @@ import torch
 from torch import nn, inf
 
 from src.aux.types import QScheme
-from src.quantization.rniq.rniq import Quantizer
-from src.quantization.rniq.utils.enums import QMode
+from src.quantization.gdnsk.gdnsk import Quantizer
+from src.quantization.gdnsk.utils.enums import QMode
 
 
 class NoisyAct(nn.Module):

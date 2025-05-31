@@ -1,3 +1,3 @@
 from src.quantization.dummy.dummy_quant import DummyQuant
-from src.quantization.rniq.rniq_quant import RNIQQuant
-__all__ = ["DummyQuant", "RNIQQuant"]
+from src.quantization.gdnsk.gdnsk_quant import gdnskQuant
+__all__ = ["DummyQuant", "gdnskQuant"]

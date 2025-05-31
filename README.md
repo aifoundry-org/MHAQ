@@ -95,27 +95,32 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Performance Metrics
 
-### CIFAR-10
+### GDNSK
+
+#### CIFAR-10
 | Model     | Dataset  | Method | QW | QA | Best Top-1 |
 |-----------|----------|--------|----|----|------------|
 | Resnet-20 | CIFAR-10 | FP (finetuned)     | -  | -  | 92.82%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 1  | 1  | 85.78%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 1  | 32 | 92.14%      |   
-| Resnet-20 | CIFAR-10 | RNIQ   | 2  | 2  | 91.4%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 3  | 3  | 92.5%      |
-| Resnet-20 | CIFAR-10 | RNIQ   | 4  | 4  | 92.78%      |
+| Resnet-20 | CIFAR-10 | GDNSK   | 1  | 1  | 85.30±0.4%      |
+| Resnet-20 | CIFAR-10 | GDNSK   | 1  | 32 | 92.01±0.1%      |   
+| Resnet-20 | CIFAR-10 | GDNSK   | 2  | 2  | 91.36±0.1%      |
+| Resnet-20 | CIFAR-10 | GDNSK   | 3  | 3  | 92.42±0.04%      |
+| Resnet-20 | CIFAR-10 | GDNSK   | 4  | 4  | 92.64±0.09%      |
 
-### CIFAR-100
+#### CIFAR-100
 | Model     | Dataset   | Method | QW | QA | Best Top-1  |
 |-----------|-----------|--------|----|----|-------------|
 | Resnet-20 | CIFAR-100 | FP     | -  | -  | 70.26%      |
-| Resnet-20 | CIFAR-100 | RNIQ   | 1  | 1  | 56.94%      |
-| Resnet-20 | CIFAR-100 | RNIQ   | 2  | 2  | 66.41%      |
-| Resnet-20 | CIFAR-100 | RNIQ   | 3  | 3  | 69.36%      |
-| Resnet-20 | CIFAR-100 | RNIQ   | 4  | 4  | 70.24%      |
+| Resnet-20 | CIFAR-100 | GDNSK   | 1  | 1  | 58.9%      |
+| Resnet-20 | CIFAR-100 | GDNSK   | 2  | 2  | 65.98±0.3%      |
+| Resnet-20 | CIFAR-100 | GDNSK   | 3  | 3  | 69.09±0.2%      |
+| Resnet-20 | CIFAR-100 | GDNSK   | 4  | 4  | 70.24±0.03%      |
 
-### IMAGENET-1K
+#### IMAGENET-1K
 | Model     | Dataset     | Method | QW | QA | Best Top-1  |
 |-----------|-------------|--------|----|----|-------------|
 | Resnet-18 | IMAGENET-1k | FP(finetuned)     | -  | -  | 71.91%      |
+| Resnet-18 | IMAGENET-1k | FP(finetuned)     | 1  | 1  | 58.60%      |
 | Resnet-18 | IMAGENET-1k | FP(finetuned)     | 1  | 32  | 66.14%      |
+| Resnet-18 | IMAGENET-1k | FP(finetuned)     | 2  | 2  | 68.90%      |
+| Resnet-18 | IMAGENET-1k | FP(finetuned)     | 4  | 4  | 69.50%      |

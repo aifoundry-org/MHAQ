@@ -16,7 +16,7 @@ training:
   loggers:
     WandbLogger:
       params:
-        name: resnet20-rniq
+        name: resnet20-gdnsk
         note: "distilled 92.84"
   callbacks:
     LayersWidthVis:
@@ -31,7 +31,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+        filename: gdnsk_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -43,7 +43,7 @@ data:
 
 
 quantization:
-  name: RNIQQuant
+  name: gdnskQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   weight_bit: 2
   act_bit: 2

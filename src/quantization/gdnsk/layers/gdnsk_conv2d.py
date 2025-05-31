@@ -4,7 +4,7 @@ from typing import Tuple
 from torch import nn, inf
 
 from src.aux.types import QScheme
-from src.quantization.rniq.rniq import Quantizer
+from src.quantization.gdnsk.gdnsk import Quantizer
 
 from src.aux.qutils import attrsetter, is_biased
 

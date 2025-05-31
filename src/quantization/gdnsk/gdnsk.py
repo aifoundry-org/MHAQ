@@ -57,7 +57,7 @@ class Quantizer:
         rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,])
     ) -> None:
         """
-        Main quantizer for rniq method.
+        Main quantizer for gdnsk method.
 
         Args:
             scale (float): _description_

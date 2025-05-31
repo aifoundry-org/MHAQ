@@ -14,14 +14,14 @@ from src.training.trainer import Trainer
 torch.set_float32_matmul_precision('high')
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run RNIQ quantization.")
+    parser = argparse.ArgumentParser(description="Run gdnsk quantization.")
     parser.add_argument(
         "--config", 
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        default="config/rniq_config_resnet20_new.yaml"
-        # default="config/rniq_config_resnet20_new_4bit.yaml"
+        default="config/gdnsk_config_resnet20_new.yaml"
+        # default="config/gdnsk_config_resnet20_new_4bit.yaml"
     )
     return parser.parse_args()
 
