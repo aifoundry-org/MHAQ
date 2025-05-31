@@ -27,8 +27,8 @@ training:
     TemperatureScale:
       params:
         scale_lr: 1
-        scale_anneal: 0.999
-        warmup: 1000
+        scale_anneal: 0.9999
+        warmup: 500
     NoiseEarlyStopping:
       params:
         monitor: mAP
