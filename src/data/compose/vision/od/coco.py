@@ -11,6 +11,8 @@ from torchvision import transforms, tv_tensors
 from typing import Tuple, Dict
 
 from torch.utils.data import DataLoader
+from src.data.compose.vision.od.utils.bbox_norm import BBoxNormalizationTransform
+from src.data.compose.vision.od.utils.resize_w_pad import ResizeWithPadding
 
 def transform_coco_outputs(coco_outputs):
     return [
@@ -35,26 +37,6 @@ def transform_coco_targets(coco_targets):
         # box.append(t['boxes'][:,2:]-t['boxes'][:,:2])
     return {'idx':torch.cat(idx), 'cls':torch.cat(cls), 'box':box}
 
-class BBoxNormalizationTransform(torch.nn.Module):
-    def forward(self, img, label):
-        if not "boxes" in label:
-            label.update(
-                {
-                    "boxes": tv_tensors.BoundingBoxes(
-                        torch.empty((0, 4)),
-                        device=img.device,
-                        format="XYXY",
-                        canvas_size=(tuple(img.size()[1::])),
-                    )
-                }
-            )
-            return img, label
-
-        label["boxes"][:, [0, 2]] /= label["boxes"].canvas_size[0]
-        label["boxes"][:, [1, 3]] /= label["boxes"].canvas_size[1]
-
-        return img, label
-
 class COCODataModule(pl.LightningDataModule):
     COCO_URLS = {
         "train2017": "http://images.cocodataset.org/zips/train2017.zip",
@@ -75,10 +57,11 @@ class COCODataModule(pl.LightningDataModule):
         self.cat2idx = []
 
         self.transform_train = v2.Compose(
-            [
+            [   
                 v2.ToImage(),
                 v2.ToDtype(torch.float32, scale=True),
-                v2.Resize((self.img_size, self.img_size)),
+                ResizeWithPadding((self.img_size, self.img_size)),
+                # v2.Resize((self.img_size, self.img_size)),
                 v2.ConvertBoundingBoxFormat("CXCYWH"),
                 BBoxNormalizationTransform(),
             ]
@@ -88,7 +71,10 @@ class COCODataModule(pl.LightningDataModule):
             [
                 v2.ToImage(),
                 v2.ToDtype(torch.float32, scale=True),
-                v2.Resize((self.img_size, self.img_size)),
+                # BBoxNormalizationTransform(),
+                # v2.ConvertBoundingBoxFormat("XYWH"),
+                ResizeWithPadding((self.img_size, self.img_size)),
+                # v2.Resize((self.img_size, self.img_size)),
             ]
         )
 
@@ -174,7 +160,8 @@ class COCODataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
             persistent_workers=True,
-            pin_memory=True
+            pin_memory=True,
+            prefetch_factor=5
         )
 
     def test_dataloader(self):
