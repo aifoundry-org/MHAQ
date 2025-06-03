@@ -51,6 +51,7 @@ class QuantizationConfig(BaseModel):
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
+    fuse_batchnorm: Optional[bool] = True
 
 
 class DataConfig(BaseModel):

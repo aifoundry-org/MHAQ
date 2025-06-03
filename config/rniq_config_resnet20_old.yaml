@@ -51,6 +51,7 @@ quantization:
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
+  fuse_batchnorm: True
   excluded_layers:
     - 'linear'
     - 'conv1'

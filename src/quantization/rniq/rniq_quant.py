@@ -58,7 +58,7 @@ class RNIQQuant(BaseQuant):
             return qmodel.criterion
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
-        self.fusebn = True
+        self.fusebn = self.config.quantization.fuse_batchnorm
         if self.config.quantization.distillation:
             if not self.config.quantization.distillation_teacher:
                 tmodel = deepcopy(lmodel).eval()
@@ -172,7 +172,7 @@ class RNIQQuant(BaseQuant):
         conv.weight.data = W * scale.view(shape)
         conv.bias = nn.Parameter(beta + (b - mu) * scale)
 
-        attrsetter(bn_name)(model, nn.Identity())
+        attrsetter(bn_name)(model, nn.Identity()) # Replacing bn module with Identity
 
     @staticmethod
     def noise_ratio(self, x=None):
