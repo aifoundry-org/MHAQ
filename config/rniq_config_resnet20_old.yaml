@@ -52,6 +52,7 @@ quantization:
   #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
   fuse_batchnorm: True
+  quantize_bias: True
   excluded_layers:
     - 'linear'
     - 'conv1'

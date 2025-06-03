@@ -25,7 +25,8 @@ class NoisyConv2d(nn.Conv2d):
         dtype=None,
         qscheme: QScheme = QScheme.PER_TENSOR,
         log_s_init: float = -12,
-        rand_noise: bool = False
+        rand_noise: bool = False,
+        quant_bias: bool = False
     ) -> None:
         super().__init__(
             in_channels,
@@ -54,32 +55,32 @@ class NoisyConv2d(nn.Conv2d):
                                         requires_grad=True)
         self._noise_ratio = torch.nn.Parameter(torch.Tensor([1]), requires_grad=False)
         self.Q = Quantizer(self, torch.exp2(self.log_wght_s), 0, -inf, inf)
-        self.Q_b = Quantizer(self, torch.exp2(self.log_b_s), 0, -inf, inf)
         self.rand_noise = rand_noise
+        self.quant_bias = quant_bias
+        if self.quant_bias:
+            self.Q_b = Quantizer(self, torch.exp2(self.log_b_s), 0, -inf, inf)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         s = torch.exp2(self.log_wght_s)
-        s_b = torch.exp2(self.log_b_s)
         self.Q.scale = s
-        # self.Q_b.scale = s_b
-        self.Q_b.scale = s.ravel()
         self.Q.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
-        self.Q_b.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
 
         if self.qscheme == QScheme.PER_CHANNEL:
             min = self.weight.amin((1,2,3),keepdim=True)
-            min_b = self.bias.amin()
         elif self.qscheme == QScheme.PER_TENSOR:
             min = self.weight.amin()
-            min_b = self.bias.amin()
         self.Q.zero_point = min
-        # self.Q_b.zero_point = min_b
-        self.Q_b.zero_point = min.ravel()
+
+        if self.quant_bias:
+            self.Q_b.scale = s.ravel()
+            self.Q_b.zero_point = min.ravel()
+            self.Q_b.rnoise_ratio.data = self._noise_ratio if self.rand_noise else torch.zeros_like(self._noise_ratio)
+            bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
+        else:
+            bias = self.bias
 
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
-        bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
 
-        # return self._conv_forward(input, weight, self.bias)
         return self._conv_forward(input, weight, bias)
 
     def extra_repr(self) -> str:
@@ -94,5 +95,5 @@ class NoisyConv2d(nn.Conv2d):
             f"in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size},\n"
             f"stride={self.stride}, padding={self.padding}, dilation={self.dilation},\n"
             f"groups={self.groups}, bias={bias}, log_wght_s_mean={log_wght_s.mean()},\n"
-            f"noise_ratio={noise_ratio}"
+            f"noise_ratio={noise_ratio}, quantized_bias={self.quant_bias}"
         )

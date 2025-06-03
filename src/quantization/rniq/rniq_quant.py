@@ -112,24 +112,21 @@ class RNIQQuant(BaseQuant):
             lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            # if module.kernel_size != (1,1):
-            if True:
-                print(layer + " " + repr(module.kernel_size))
-                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-                following_layer_type = layer_types[layer_names.index(layer) + 1]
+            preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+            following_layer_type = layer_types[layer_names.index(layer) + 1]
 
-                #BatchNorm fusing
-                if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
-                    self.fuse_conv_bn(qmodel.model, layer, layer_names[layer_names.index(layer) +1])
+            #BatchNorm fusing
+            if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
+                self.fuse_conv_bn(qmodel.model, layer, layer_names[layer_names.index(layer) +1])
 
-                if issubclass(preceding_layer_type, nn.ReLU): #XXX: hack shoul be changed through config
-                    qmodule = self._quantize_module(
-                        module, signed_Activations=False)
-                else:
-                    qmodule = self._quantize_module(
-                        module, signed_Activations=False)
-                
-                attrsetter(layer)(qmodel.model, qmodule)
+            if issubclass(preceding_layer_type, nn.ReLU): #XXX: hack shoul be changed through config
+                qmodule = self._quantize_module(
+                    module, signed_Activations=False)
+            else:
+                qmodule = self._quantize_module(
+                    module, signed_Activations=False)
+            
+            attrsetter(layer)(qmodel.model, qmodule)
 
         if self.config.quantization.freeze_batchnorm:
             RNIQQuant.freeze_all_batchnorm_layers(qmodel)                
@@ -303,6 +300,7 @@ class RNIQQuant(BaseQuant):
             self.weight_bit = self.quant_config.weight_bit
             self.excluded_layers = self.quant_config.excluded_layers
             self.qscheme = self.quant_config.qscheme
+            self.quant_bias = self.quant_config.quantize_bias
 
     def _quantize_module(self, module, signed_Activations):
         if isinstance(module, nn.Conv2d):
@@ -349,6 +347,7 @@ class RNIQQuant(BaseQuant):
             module.padding_mode,
             qscheme=self.qscheme,
             log_s_init=-12,
+            quant_bias=self.quant_bias
         )
 
     def _quantize_module_linear(self, module: nn.Linear):
