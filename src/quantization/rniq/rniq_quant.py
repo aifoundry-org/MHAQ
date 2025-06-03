@@ -112,7 +112,7 @@ class RNIQQuant(BaseQuant):
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
             # if module.kernel_size != (1, 1):
-                # print(layer + " " + repr(module.kernel_size))
+            # print(layer + " " + repr(module.kernel_size))
             preceding_layer_type = layer_types[layer_names.index(layer) - 1]
             if issubclass(
                 preceding_layer_type, (nn.ReLU, nn.SiLU)
@@ -179,6 +179,7 @@ class RNIQQuant(BaseQuant):
     @staticmethod
     def noisy_val_decorator(val_step):
         self = val_step.__self__
+        self._batch_size = self.trainer.config.data.batch_size
 
         def wrapper(*args):
             val_step(*args)
@@ -187,43 +188,49 @@ class RNIQQuant(BaseQuant):
                 "Mean weights bit width",
                 model_stats.get_weights_bit_width_mean(self.model),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
             self.log(
                 "Actual weights bit width",
                 model_stats.get_true_weights_width(self.model, max=False),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
             self.log(
                 "Actual weights max bit width",
                 model_stats.get_true_weights_width(self.model),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
             self.log(
                 "Mean activations bit width",
                 model_stats.get_activations_bit_width_mean(self.model),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
             self.log(
                 "Actual activations bit widths",
                 model_stats.get_true_activations_width(self.model, max=False),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
             self.log(
                 "Actual activations max bit widths",
                 model_stats.get_true_activations_width(self.model),
                 prog_bar=False,
+                batch_size=self._batch_size,
             )
 
         return wrapper
-    
+
     @staticmethod
     def noisy_test_decorator(test_step):
         self = test_step.__self__
 
         def wrapper(*args):
             return test_step(*args)
-        return wrapper
 
+        return wrapper
 
     @staticmethod  # yes, it's a static method with self argument
     def noisy_step(self, x):
