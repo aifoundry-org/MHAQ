@@ -27,6 +27,11 @@ from collections import OrderedDict
 
 
 class RNIQQuant(BaseQuant):
+    def __init__(self, config):
+        super().__init__(config)
+        # self.activations_zero_point = 0
+        self.activations_zero_point = -0.2784645427610738
+
     def module_mappings(self):
         return {
             nn.Conv2d: NoisyConv2d,
@@ -104,7 +109,6 @@ class RNIQQuant(BaseQuant):
 
         qmodel.validation_step = RNIQQuant.noisy_val_decorator(qmodel.validation_step)
 
-        # qmodel.test_step = RNIQQuant.noisy_test_step.__get__(qmodel, type(qmodel))
         qmodel.test_step = RNIQQuant.noisy_test_decorator(qmodel.test_step)
 
         # Replacing layers directly
@@ -117,6 +121,10 @@ class RNIQQuant(BaseQuant):
             if issubclass(
                 preceding_layer_type, (nn.ReLU, nn.SiLU)
             ):  # XXX: hack shoul be changed through config
+                if isinstance(preceding_layer_type, nn.SiLU):
+                    self.activations_zero_point = -0.2784645427610738
+                elif isinstance(preceding_layer_type, nn.ReLU):
+                    self.activations_zero_point = 0.0
                 qmodule = self._quantize_module(module, signed_Activations=False)
             else:
                 qmodule = self._quantize_module(module, signed_Activations=False)
@@ -398,7 +406,11 @@ class RNIQQuant(BaseQuant):
                 [
                     (
                         "activations_quantizer",
-                        NoisyAct(signed=signed_activations, disable=disabled),
+                        NoisyAct(
+                            signed=True,
+                            disable=disabled,
+                            init_zero_point=self.activations_zero_point,
+                        ),
                     ),
                     ("0", qmodule),
                 ]

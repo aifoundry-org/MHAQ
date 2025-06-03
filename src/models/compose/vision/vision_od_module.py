@@ -68,7 +68,27 @@ class LVisionOD(pl.LightningModule):
             on_epoch=True,
             batch_size=self._batch_size,
         )
+        self.mAP.reset()
         return super().on_validation_epoch_end()
+    
+    def on_test_epoch_end(self):
+        map = self.mAP.compute()
+        self.log(
+            f"mAP",
+            map["map"],
+            prog_bar=False,
+            on_epoch=True,
+            batch_size=self._batch_size,
+        )
+        self.log(
+            f"mAP_50",
+            map["map_50"],
+            prog_bar=False,
+            on_epoch=True,
+            batch_size=self._batch_size,
+        )
+        self.mAP.reset()
+        return super().on_test_epoch_end()
 
     def on_load_checkpoint(self, checkpoint: dict) -> None:
         state_dict = checkpoint["state_dict"]
@@ -129,19 +149,15 @@ class LVisionOD(pl.LightningModule):
         self.mAP.update(output, target)
 
     def test_step(self, test_batch, test_index):
-        raise NotImplementedError("Test is not yet implemented for OD networks!")
         inputs, target = test_batch
-        outputs = self.forward(inputs)
+        output = self.forward(inputs)
         if self.model._get_name() in YOLO_FAMILY:
-            loss_box, loss_cls, loss_dfl = self.criterion(outputs, target)
-            test_loss = loss_box + loss_cls + loss_dfl
+            output = self.forward(inputs)
         else:
-            test_loss = self.criterion(outputs, target)
-        for name, metric in self.metrics:
-            metric_value = metric(outputs, target)
-            self.log(f"{name}", metric_value, prog_bar=False)
+            output = self.forward(inputs)
+            test_loss = self.criterion(output, target)
 
-        self.log("test_loss", test_loss, prog_bar=True)
+        self.mAP.update(output, target)
 
     def predict_step(self, *args, **kwargs):
         raise NotImplementedError("Predict is not yet implemented for OD networks!")
