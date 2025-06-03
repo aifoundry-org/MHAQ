@@ -16,7 +16,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "Symmetrical KL"
+        note: "Symmetrical KL, no bn, bias quant"
   callbacks:
     LayersWidthVis:
       params: {}
@@ -44,8 +44,8 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 1
-  act_bit: 1
+  weight_bit: 4
+  act_bit: 4
   distillation: True
   distillation_loss: Symmetrical KL
   freeze_batchnorm: False
