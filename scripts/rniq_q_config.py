@@ -1,5 +1,8 @@
 import os
 import sys
+import resource
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
 import argparse
 
@@ -20,7 +23,7 @@ def parse_args():
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        default="config/rniq_config_resnet20_old.yaml"
+        default="config/rniq_config_yolo11.yaml"
         # default="config/rniq_config_resnet20_new_4bit.yaml"
     )
     return parser.parse_args()

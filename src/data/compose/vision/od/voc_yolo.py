@@ -17,26 +17,22 @@ VOC_CLASSES = (
 CLASS_TO_IDX = {c:i for i,c in enumerate(VOC_CLASSES)}
 
 def collate_fn(batch: List[Tuple[Tensor, Tensor]]) -> Tuple[Tensor, Tensor]:
-    """
-    Stacks images into (B,C,H,W).
-    Concatenates targets into a (M,6) tensor of [img_idx, cls, x, y, w, h].
-    """
     images = torch.stack([b[0] for b in batch], dim=0)
-    all_targets = []
-    for img_idx, (_, boxes) in enumerate(batch):
-        if boxes.numel() == 0:
-            continue
-        idx_col = torch.full((boxes.size(0), 1), img_idx, dtype=boxes.dtype)
-        all_targets.append(torch.cat([idx_col, boxes], dim=1))
-    if all_targets:
-        targets = torch.cat(all_targets, dim=0)
-    else:
-        targets = torch.zeros((0, 6), dtype=torch.float32)
+
+    targets = []
+    for i, (_, tgt) in enumerate(batch):
+        targets.append({
+            "boxes": tgt["boxes"],
+            "labels": tgt["labels"],
+            "idx": torch.fill(torch.zeros_like(tgt["idx"]), i)
+        })
+
     return images, targets
 
 
 class YOLOTargetTransform:
-    def __init__(self, img_size: Tuple[int, int]):
+    def __init__(self, img_size: Tuple[int, int], validation=False):
+        self.validation = validation # when train, it's cxcywh, when validating int xyxy
         self.img_size = img_size
 
     def __call__(self, target: Dict) -> torch.Tensor:
@@ -44,24 +40,34 @@ class YOLOTargetTransform:
         if isinstance(anns, dict):
             anns = [anns]
         boxes = []
+        labels = []
+        indices = []
         w_img, h_img = self.img_size
-        for obj in anns:
+        for i, obj in enumerate(anns):
             cls_idx = CLASS_TO_IDX[obj["name"]]
             b = obj["bndbox"]
             xmin = float(b["xmin"])
             ymin = float(b["ymin"])
             xmax = float(b["xmax"])
             ymax = float(b["ymax"])
-            # center, width, height
-            xc = ((xmin + xmax) / 2) / w_img
-            yc = ((ymin + ymax) / 2) / h_img
-            bw = (xmax - xmin) / w_img
-            bh = (ymax - ymin) / h_img
-            boxes.append([cls_idx, xc, yc, bw, bh])
+            if self.validation:
+                boxes.append([xmin, ymin, xmax, ymax])
+            else:
+                # center, width, height
+                xc = ((xmin + xmax) / 2) / w_img
+                yc = ((ymin + ymax) / 2) / h_img
+                bw = (xmax - xmin) / w_img
+                bh = (ymax - ymin) / h_img
+                boxes.append([xc, yc, bw, bh])
+            # boxes.append([cls_idx, xc, yc, bw, bh])
+            labels.append(cls_idx)
+            indices.append(i)
         if not boxes:
             # no objects => return an empty tensor
-            return torch.zeros((0,5), dtype=torch.float32)
-        return torch.tensor(boxes, dtype=torch.float32)
+            # return torch.zeros((0,5), dtype=torch.float32)
+            return {"boxes": torch.zeros((0,4), dtype=torch.float32), "labels": torch.zeros(0)}
+        # return torch.tensor(boxes, dtype=torch.float32)
+        return {"idx": torch.tensor(indices), "boxes": torch.tensor(boxes, dtype=torch.float32), "labels": torch.tensor(labels)}
 
 class YOLOVOCDataModule(pl.LightningDataModule):
     def __init__(
@@ -89,7 +95,8 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             ]
         )
 
-        self.target_transform = YOLOTargetTransform((self.img_size, self.img_size))
+        self.train_target_transform = YOLOTargetTransform((self.img_size, self.img_size))
+        self.val_target_transform = YOLOTargetTransform((self.img_size, self.img_size), validation=True)
 
     def prepare_data(self):
         VOCDetection(
@@ -104,7 +111,7 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             image_set="train",
             download=False,
             transform=self.transform_train,
-            target_transform=self.target_transform
+            target_transform=self.train_target_transform
         )
 
         self.voc_test = VOCDetection(
@@ -113,6 +120,7 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             image_set="val",
             download=False,
             transform=self.transform_train,
+            target_transform=self.val_target_transform
         )
 
     def train_dataloader(self):
