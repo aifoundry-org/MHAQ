@@ -16,7 +16,7 @@ training:
     WandbLogger:
       params:
         name: yolo_v11_n
-        note: ""
+        note: "signed activations + calibration"
  
   callbacks:
     ModelCheckpoint:

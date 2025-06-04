@@ -87,14 +87,19 @@ class RNIQQuant(BaseQuant):
 
         if self.config.quantization.distillation:
             qmodel.tmodel = tmodel.requires_grad_(False)
-
-        # qmodel.wrapped_criterion = PotentialLoss(
-        qmodel.wrapped_criterion = PotentialLossNoPred(
-            criterion=self.get_distill_loss(qmodel=qmodel),
-            p=1,
-            a=self.act_bit,
-            w=self.weight_bit,
-        )
+            qmodel.wrapped_criterion = PotentialLoss(
+                criterion=self.get_distill_loss(qmodel=qmodel),
+                p=1,
+                a=self.act_bit,
+                w=self.weight_bit,
+            )
+        else:
+            qmodel.wrapped_criterion = PotentialLossNoPred(
+                criterion=self.get_distill_loss(qmodel=qmodel),
+                p=1,
+                a=self.act_bit,
+                w=self.weight_bit,
+            )
 
         qmodel.noise_ratio = RNIQQuant.noise_ratio.__get__(qmodel, type(qmodel))
 
@@ -104,10 +109,10 @@ class RNIQQuant(BaseQuant):
             qmodel.training_step = RNIQQuant.distillation_noisy_training_step.__get__(
                 qmodel, type(qmodel)
             )
+            qmodel.validation_step = RNIQQuant.noisy_validation_step.__get__(qmodel, type(qmodel))
         else:
             qmodel.training_step = RNIQQuant.noisy_train_decorator(qmodel.training_step)
-
-        qmodel.validation_step = RNIQQuant.noisy_val_decorator(qmodel.validation_step)
+            qmodel.validation_step = RNIQQuant.noisy_val_decorator(qmodel.validation_step)
 
         qmodel.test_step = RNIQQuant.noisy_test_decorator(qmodel.test_step)
 
@@ -125,7 +130,7 @@ class RNIQQuant(BaseQuant):
                     self.activations_zero_point = -0.2784645427610738
                 elif isinstance(preceding_layer_type, nn.ReLU):
                     self.activations_zero_point = 0.0
-                qmodule = self._quantize_module(module, signed_Activations=False)
+                qmodule = self._quantize_module(module, signed_Activations=True)
             else:
                 qmodule = self._quantize_module(module, signed_Activations=False)
 
