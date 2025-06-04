@@ -67,6 +67,7 @@ class RNIQQuant(BaseQuant):
             return qmodel.criterion
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
+        self.fusebn = self.config.quantization.fuse_batchnorm
         if self.config.quantization.distillation:
             if not self.config.quantization.distillation_teacher:
                 tmodel = deepcopy(lmodel).eval()
@@ -120,19 +121,18 @@ class RNIQQuant(BaseQuant):
         qlayers = self._get_layers(lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            # if module.kernel_size != (1, 1):
-            # print(layer + " " + repr(module.kernel_size))
-            preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-            if issubclass(
-                preceding_layer_type, (nn.ReLU, nn.SiLU)
-            ):  # XXX: hack shoul be changed through config
-                if isinstance(preceding_layer_type, nn.SiLU):
-                    self.activations_zero_point = -0.2784645427610738
-                elif isinstance(preceding_layer_type, nn.ReLU):
-                    self.activations_zero_point = 0.0
-                qmodule = self._quantize_module(module, signed_Activations=True)
-            else:
-                qmodule = self._quantize_module(module, signed_Activations=False)
+            if module.kernel_size != (1,1):
+                # print(layer + " " + repr(module.kernel_size))
+                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+                following_layer_type = layer_types[layer_names.index(layer) + 1]
+                if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
+                    self.fuse_conv_bn(qmodel.model, layer, layer_names[layer_names.index(layer) +1])
+                if issubclass(preceding_layer_type, nn.ReLU, nn.SiLU): #XXX: hack shoul be changed through config
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
+                else:
+                    qmodule = self._quantize_module(
+                        module, signed_Activations=False)
 
                 attrsetter(layer)(qmodel.model, qmodule)
 
@@ -153,6 +153,31 @@ class RNIQQuant(BaseQuant):
                 # Freeze BN params
                 module.weight.requires_grad = not freeze
                 module.bias.requires_grad = not freeze
+    
+    def fuse_conv_bn(self, model: nn.Module, conv_name: str, bn_name: str):
+        conv = attrgetter(conv_name)(model)
+
+        W = conv.weight.clone()
+        if conv.bias is not None:
+            b = conv.bias.clone()
+        else:
+            b = torch.zeros(conv.out_channels, device=W.device)
+
+        bn = attrgetter(bn_name)(model)
+        mu = bn.running_mean
+        var = bn.running_var
+        eps = bn.eps
+        gamma = bn.weight
+        beta = bn.bias
+
+        std = torch.sqrt(var + eps)
+        scale = gamma / std
+        shape = [ -1 ] + [1] * (W.dim() - 1)
+
+        conv.weight.data = W * scale.view(shape)
+        conv.bias = nn.Parameter(beta + (b - mu) * scale)
+
+        attrsetter(bn_name)(model, nn.Identity()) # Replacing bn module with Identity
 
     @staticmethod
     def noise_ratio(self, x=None):
@@ -381,6 +406,7 @@ class RNIQQuant(BaseQuant):
             self.weight_bit = self.quant_config.weight_bit
             self.excluded_layers = self.quant_config.excluded_layers
             self.qscheme = self.quant_config.qscheme
+            self.quant_bias = self.quant_config.quantize_bias
 
     def _quantize_module(self, module, signed_Activations):
         if isinstance(module, nn.Conv2d):
@@ -437,6 +463,7 @@ class RNIQQuant(BaseQuant):
             module.padding_mode,
             qscheme=self.qscheme,
             log_s_init=-12,
+            quant_bias=self.quant_bias
         )
 
     def _quantize_module_linear(self, module: nn.Linear):
