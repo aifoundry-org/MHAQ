@@ -25,13 +25,14 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 50
+        patience: 100
         min_delta: 0.0001
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+        auto_insert_metric_name: False
+        filename: rniq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
     TemperatureScale:
       params:
         scale_lr: 1
@@ -45,8 +46,8 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 2
-  act_bit: 2
+  weight_bit: 1
+  act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new
