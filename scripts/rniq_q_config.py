@@ -12,6 +12,7 @@ from src.quantization.quantizer import Quantizer
 from src.training.trainer import Trainer
 
 torch.set_float32_matmul_precision('high')
+torch.serialization.add_safe_globals([argparse.Namespace])
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run RNIQ quantization.")
@@ -53,6 +54,7 @@ def main():
     trainer.fit(qmodel, datamodule=data)
 
     # Test model after quantization
+    trainer.strategy.barrier()
     trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
