@@ -29,8 +29,8 @@ from collections import OrderedDict
 class RNIQQuant(BaseQuant):
     def __init__(self, config):
         super().__init__(config)
-        # self.activations_zero_point = 0
-        self.activations_zero_point = -0.2784645427610738
+        self.activations_zero_point = self.config.quantization.activation_zero_point
+        # self.activations_zero_point = -0.2784645427610738
 
     def module_mappings(self):
         return {
@@ -127,7 +127,7 @@ class RNIQQuant(BaseQuant):
                 following_layer_type = layer_types[layer_names.index(layer) + 1]
                 if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
                     self.fuse_conv_bn(qmodel.model, layer, layer_names[layer_names.index(layer) +1])
-                if issubclass(preceding_layer_type, nn.ReLU, nn.SiLU): #XXX: hack shoul be changed through config
+                if issubclass(preceding_layer_type, (nn.ReLU, nn.SiLU)): #XXX: hack shoul be changed through config
                     qmodule = self._quantize_module(
                         module, signed_Activations=False)
                 else:

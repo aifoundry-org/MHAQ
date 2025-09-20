@@ -23,8 +23,8 @@ def parse_args():
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        default="config/rniq_config_yolo11.yaml"
-        # default="config/rniq_config_resnet20_new_4bit.yaml"
+        # default="config/rniq_config_yolo11.yaml"
+        default="config/rniq_config_resnet20_old.yaml"
     )
     return parser.parse_args()
 

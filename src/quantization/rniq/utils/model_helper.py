@@ -23,8 +23,12 @@ class ModelHelper:
                     min = module.weight.amin((1,2,3))
                     max = module.weight.amax((1,2,3))
 
-                    min_b = module.bias.amin()
-                    max_b = module.bias.amax()
+                    if module.bias:
+                        min_b = module.bias.amin()
+                        max_b = module.bias.amax()
+                    else:
+                        min_b = torch.Tensor([0]).to(min.device)
+                        max_b = torch.Tensor([0]).to(max.device)
                 elif qscheme == QScheme.PER_TENSOR:
                     log_wght_s.append(module.log_wght_s)
                     log_wght_s.append(module.log_b_s)

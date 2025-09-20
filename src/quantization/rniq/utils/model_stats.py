@@ -13,7 +13,8 @@ from src.quantization.rniq.layers.rniq_act import NoisyAct
 
 class ModelStats:
     def __init__(self, model: torch.nn.Module):
-        self.named_params = {name: p for name, p in model.cpu().named_parameters()}
+        self.named_params = {name: p for name,
+                             p in model.cpu().named_parameters()}
         self.modules = [(name, m) for name, m in model.cpu().named_modules()]
         self.noisy_layers = [
             m for _, m in self.modules if isinstance(m, (NoisyLinear, NoisyConv2d))
@@ -53,7 +54,8 @@ class ModelStats:
             ("min", torch.min),
             ("max", torch.max),
         ]:
-            stats[stat_name] = {name: stat_func(p) for name, p in param_values.items()}
+            stats[stat_name] = {name: stat_func(
+                p) for name, p in param_values.items()}
         return stats
 
     def _compute_module_stats(self, module_condition):
@@ -94,11 +96,13 @@ class ModelStats:
                 "Model weights abs mean, std",
                 zip(weights_stats()[0], weights_stats()[1]),
             ),
-            ("Model weights abs min, max", zip(weights_stats()[2], weights_stats()[3])),
+            ("Model weights abs min, max", zip(
+                weights_stats()[2], weights_stats()[3])),
             (
                 "Model weights bit_width",
                 [
-                    (i[0], get_activations_bit_width(torch.log2(i[1]) + 1, j[1], 0))
+                    (i[0], get_activations_bit_width(
+                        torch.log2(i[1]) + 1, j[1], 0))
                     for i, j in zip(weights_stats()[3], self._get_s_weights())
                 ],
             ),
@@ -119,7 +123,8 @@ def get_true_layer_bit_width(module: torch.nn.Module, max=True):
         qweights = module.Q.quantize(module.weight.detach())
         # qbiases = module.Q_b.quantize(module.bias.detach())
         reshaped = qweights.permute(
-            channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]
+            channel_dim, *
+            [i for i in range(qweights.dim()) if i != channel_dim]
         ).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(val_count(channel))) for channel in reshaped]
         # bias_bw = np.log2(val_count(qbiases))
@@ -156,7 +161,8 @@ def get_layer_wnb_bit_width(
 
     # add 1 lsb gap to prevent overflow
     log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))
-    log_q_b = torch.log2((max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
+    log_q_b = torch.log2(
+        (max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
 
     return (get_activations_bit_width(log_q, log_s, 0) + get_activations_bit_width(log_q_b, log_b_s, 0)) / 2
 
@@ -210,6 +216,8 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
         weight = module.weight.detach()
         if module.bias is not None:
             bias = module.bias.detach()
+        else:
+            bias = torch.Tensor([0]).to(weight.device)
 
         # we are not quantizing bias therefore noo need to include it
         # weight = (
@@ -221,7 +229,7 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
             # weight, module.log_wght_s.detach(), module.qscheme
         # )
         layer_bw = get_layer_wnb_bit_width(
-            weight, module.log_wght_s.detach(),bias, module.log_b_s.detach(), module.qscheme
+            weight, module.log_wght_s.detach(), bias, module.log_b_s.detach(), module.qscheme
         )
 
         if not torch.isnan(layer_bw):

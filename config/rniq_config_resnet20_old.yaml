@@ -45,14 +45,17 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 4
-  act_bit: 4
+  weight_bit: 1
+  act_bit: 1
   distillation: True
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
-  fuse_batchnorm: True
-  quantize_bias: True
+  # fuse_batchnorm: True
+  fuse_batchnorm: False
+  # quantize_bias: True
+  quantize_bias: False
+  activation_zero_point: 0.0
   excluded_layers:
     - 'linear'
     - 'conv1'

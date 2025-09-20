@@ -53,6 +53,7 @@ class QuantizationConfig(BaseModel):
     freeze_batchnorm: Optional[bool] = False
     fuse_batchnorm: Optional[bool] = True
     quantize_bias: Optional[bool] = True
+    activation_zero_point: Optional[float] = 0.0
 
 
 class DataConfig(BaseModel):
