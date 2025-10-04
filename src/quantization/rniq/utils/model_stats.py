@@ -7,7 +7,8 @@ from src.loggers.default_logger import logger
 from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
-#from src.quantization.rniq.rniq import Quantizer
+
+# from src.quantization.rniq.rniq import Quantizer
 
 
 class ModelStats:
@@ -83,7 +84,6 @@ class ModelStats:
         return self._compute_module_stats(
             lambda m: isinstance(m, (NoisyLinear, NoisyConv2d))
         )
-    
 
     def print_stats(self):
         weights_stats = self._get_module_weight_stats
@@ -112,38 +112,59 @@ class ModelStats:
             for name, value in values:
                 logger.debug(f"{name}: {value}")
 
+
 def get_true_layer_bit_width(module: torch.nn.Module, max=True):
     if module.qscheme == QScheme.PER_TENSOR:
         qweights = module.Q.quantize(module.weight.detach())
         bit_width = np.log2(val_count(qweights))
-#         bit_width = np.log2(qweights.unique().numel())
         return bit_width
     elif module.qscheme == QScheme.PER_CHANNEL:
         channel_dim = torch.tensor(0)
         qweights = module.Q.quantize(module.weight.detach())
-        reshaped = qweights.permute(channel_dim, *[i for i in range(qweights.dim()) if i != channel_dim]).reshape(qweights.size(channel_dim), -1)
+        # qbiases = module.Q_b.quantize(module.bias.detach())
+        reshaped = qweights.permute(
+            channel_dim, *
+            [i for i in range(qweights.dim()) if i != channel_dim]
+        ).reshape(qweights.size(channel_dim), -1)
         bit_widths = [(np.log2(val_count(channel))) for channel in reshaped]
+        # bias_bw = np.log2(val_count(qbiases))
+        # return (np.max(bit_widths) + np.max(bias_bw)) / 2 if max else (np.mean(bit_widths) + np.mean(bias_bw)) / 2
         return np.max(bit_widths) if max else np.mean(bit_widths)
 
-# much faster than unique    
+
+# much faster than unique
 def val_count(q):
     minmax = q.aminmax()
     return (minmax.max - minmax.min + 1).item()
 
-def get_layer_weights_bit_width(
-        layer_weights: torch.Tensor, log_s: torch.Tensor, config=QScheme.PER_TENSOR):
+
+def get_layer_wnb_bit_width(
+    layer_weights: torch.Tensor,
+    log_s: torch.Tensor,
+    layer_bias: torch.Tensor | None = None,
+    log_b_s: torch.Tensor | None = None,
+    config=QScheme.PER_TENSOR,
+):
     # add 0.5 bit gap to prevent overflow
     if config == QScheme.PER_TENSOR:
         min = layer_weights.amin()
         max = layer_weights.amax()
+
+        min_b = layer_bias.amin()
+        max_b = layer_bias.amax()
     elif config == QScheme.PER_CHANNEL:
         min = layer_weights.amin((1, 2, 3))
         max = layer_weights.amax((1, 2, 3))
 
-    # add 1 lsb gap to prevent overflow
-    log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))        
+        min_b = layer_bias.amin()
+        max_b = layer_bias.amax()
 
-    return get_activations_bit_width(log_q, log_s, 0)
+    # add 1 lsb gap to prevent overflow
+    log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))
+    log_q_b = torch.log2(
+        (max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
+
+    return (get_activations_bit_width(log_q, log_s, 0) + get_activations_bit_width(log_q_b, log_b_s, 0)) / 2
 
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
@@ -170,7 +191,7 @@ def get_true_weights_width(model: torch.nn.Module, max=True):
     for module in lin_layers:
         layer_bw = get_true_layer_bit_width(module)
         bit_widths.append(layer_bw)
-    
+
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
@@ -181,8 +202,8 @@ def get_true_activations_width(model: torch.nn.Module, max=True):
     bit_widths = []
     for module in act_modules:
         bit_widths.append(module.bw.cpu())
-#         bit_widths.append(module.bw.numpy())
-    
+    #         bit_widths.append(module.bw.numpy())
+
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
@@ -193,6 +214,10 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
     bit_widths = []
     for module in lin_layers:
         weight = module.weight.detach()
+        if module.bias is not None:
+            bias = module.bias.detach()
+        else:
+            bias = torch.Tensor([0]).to(weight.device)
 
         # we are not quantizing bias therefore noo need to include it
         # weight = (
@@ -200,26 +225,33 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
         # if module.bias is None
         # else torch.cat((module.weight.detach().reshape(-1), module.bias.detach()))
         # )
-        layer_bw = get_layer_weights_bit_width(
-            weight, module.log_wght_s.detach(), module.qscheme
+        # layer_bw = get_layer_wnb_bit_width(
+            # weight, module.log_wght_s.detach(), module.qscheme
+        # )
+        layer_bw = get_layer_wnb_bit_width(
+            weight, module.log_wght_s.detach(), bias, module.log_b_s.detach(), module.qscheme
         )
+
         if not torch.isnan(layer_bw):
             bit_widths.append(layer_bw.mean())
     return torch.stack(bit_widths).mean()
 
 
 def get_activations_bit_width(log_q, log_s, b):
-    #s = torch.pow(2, log_s.ravel())
-    #q = torch.pow(2, log_q.ravel())
-    #zero_point = torch.zeros(1).to(s.device)
-    #ql, qm = b - q / 2, b + q / 2
-    #Q = Quantizer(s, zero_point, ql, qm)
-    #Q.rnoise_ratio = torch.tensor([0]).to(s.device)
-    #return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
+    # s = torch.pow(2, log_s.ravel())
+    # q = torch.pow(2, log_q.ravel())
+    # zero_point = torch.zeros(1).to(s.device)
+    # ql, qm = b - q / 2, b + q / 2
+    # Q = Quantizer(s, zero_point, ql, qm)
+    # Q.rnoise_ratio = torch.tensor([0]).to(s.device)
+    # return torch.ceil(torch.log2(Q.quantize(qm) - Q.quantize(ql) + 1)).mean()
     return (log_q - log_s).mean()
+
 
 def is_converged(model):
     loss = model.wrapped_criterion
-    converged = get_true_weights_width(model) <= loss.wt and  get_true_activations_width(model) <= loss.at
+    converged = (
+        get_true_weights_width(model) <= loss.wt
+        and get_true_activations_width(model) <= loss.at
+    )
     return converged
-

@@ -12,6 +12,8 @@ from pathlib import Path
 from src.aux.types import MType
 from src.aux.find_root import find_project_root
 from src.models.compose.vision.vision_cls_module import LVisionCls
+from src.models.compose.vision.vision_od_module import LVisionOD
+from src.models.compose.criterion import get_criterion
 
 current_file_path = Path(__file__).resolve()
 
@@ -33,20 +35,20 @@ class ModelComposer():
             self.model_type = MType[model_config.type]
             self.model = getattr(compose_models, model_config.name)(
                 **model_config.params)
-            self.criterion = getattr(nn, training_config.criterion)()
+            self.criterion = get_criterion(criterion_name=training_config.criterion, model=self.model)
             self.optimizer = getattr(optim, training_config.optimizer)
             self.lr = training_config.learning_rate
 
             if model_config.cpt_url:
                 if "file://" in model_config.cpt_url:
                     state_dict = torch.load(os.path.join(find_project_root(
-                        current_file_path), model_config.cpt_url.split("file://")[1]))
+                        current_file_path), model_config.cpt_url.split("file://")[1]), weights_only=False)
                 else:
                     state_dict = torch.hub.load_state_dict_from_url(
                         model_config.cpt_url)
                 state_dict = state_dict.get('model', state_dict)
                 try:
-                    self.model.load_state_dict(state_dict)
+                    self.model.load_state_dict(state_dict.state_dict())
                 except:
                     wrapper = nn.Sequential(
                         OrderedDict([('module', self.model)]))
@@ -60,6 +62,8 @@ class ModelComposer():
 
         if self.model_type == MType.VISION_CLS:
             module = LVisionCls(self.__dict__)
+        elif self.model_type == MType.VISION_OD:
+            return LVisionOD(self.__dict__)
         elif self.model_type == MType.VISION_DNS:
             raise NotImplementedError()
         elif self.model_type == MType.VISION_SR:

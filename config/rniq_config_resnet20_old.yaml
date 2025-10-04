@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "distilled 92.84"
+        note: "distilled 92.84 NO_BN, bias quant"
   callbacks:
     LayersWidthVis:
       params: {}
@@ -52,6 +52,11 @@ quantization:
   distillation_loss: Symmetrical KL
   #distillation_teacher: resnet20_cifar10_new
   freeze_batchnorm: False
+  # fuse_batchnorm: True
+  fuse_batchnorm: False
+  # quantize_bias: True
+  quantize_bias: False
+  activation_zero_point: 0.0
   excluded_layers:
     - 'linear'
     - 'conv1'

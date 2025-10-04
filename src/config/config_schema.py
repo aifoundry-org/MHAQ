@@ -10,7 +10,7 @@ from typing import Literal, Dict, Optional, List
 
 
 class ModelConfig(BaseModel):
-    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "LM"]
+    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "VISION_OD", "LM"]
     name: str
     cpt_url: Optional[str] = None
     params: Dict
@@ -23,7 +23,7 @@ class Logger(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    criterion: str
+    criterion: str | List[str]
     optimizer: str
     learning_rate: float
     max_epochs: int
@@ -51,6 +51,9 @@ class QuantizationConfig(BaseModel):
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
+    fuse_batchnorm: Optional[bool] = True
+    quantize_bias: Optional[bool] = True
+    activation_zero_point: Optional[float] = 0.0
 
 
 class DataConfig(BaseModel):
@@ -69,8 +72,8 @@ class ConfigSchema(BaseModel):
 
     @field_validator("training")
     def validate_training(cls, v):
-        if not hasattr(nn, v.criterion):
-            raise ValueError(f"Invalid criterion: {v.criterion}")
+        # if not hasattr(nn, v.criterion):
+            # raise ValueError(f"Invalid criterion: {v.criterion}")
         if not hasattr(optim, v.optimizer):
             raise ValueError(f"Invalid optimizer: {v.optimizer}")
         for callback in v.callbacks:
