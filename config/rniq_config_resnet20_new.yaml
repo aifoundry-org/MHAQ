@@ -47,8 +47,6 @@ quantization:
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   weight_bit: 4
   act_bit: 4
-  distillation: True
-  distillation_loss: Symmetrical KL
   freeze_batchnorm: False
   excluded_layers:
     - 'features.init_block.conv'
@@ -56,4 +54,7 @@ quantization:
   calibration:
     act_bit: 10
     weight_bit: 10
+  params:
+    distillation: True
+    distillation_loss: Symmetrical KL
 

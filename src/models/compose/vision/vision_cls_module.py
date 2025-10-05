@@ -72,7 +72,8 @@ class LVisionCls(pl.LightningModule):
             metric_value = metric(outputs, target)
             self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
 
-        self.log("val_loss", val_loss, prog_bar=False, sync_dist=True)
+        # self.log("val_loss", val_loss, prog_bar=False, sync_dist=True)
+        return val_loss
     
     def test_step(self, test_batch, test_index):
         inputs, target = test_batch
