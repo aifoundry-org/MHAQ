@@ -35,7 +35,7 @@ class RandNoiseScale(Callback):
 
                 pl_module.noise_ratio(noise_ratio)
                 
-            pl_module.log("RNoise ratio", pl_module._noise_ratio, prog_bar=True, sync_dist=True)
+            pl_module.log("RNoise ratio", pl_module._noise_ratio, prog_bar=True)
 
             self.q_loss = 0
             
