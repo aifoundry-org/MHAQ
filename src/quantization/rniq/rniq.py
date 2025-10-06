@@ -2,6 +2,7 @@ import torch
 
 from torch import Tensor
 from torch.autograd import Function
+import torch.distributed as dist
 
 class QNoise(Function):
 
@@ -34,14 +35,49 @@ class QNoise(Function):
         # skip them. Returning gradients for inputs that don't require it is
         # not an error.
         if ctx.needs_input_grad[0]:
-            grad_input = grad_output * 0
+            # STE
+            #grad_input = grad_output * 0
+
+            # EWGS
+            # e = torch.round(input) - input
+            # extra gradient so that total grad to x becomes
+            # g + delta * |g| * (x - round(x))  (i.e., EWGS Eq. (4))
+            # delta = 1e-2
+            # grad_input = -torch.abs(grad_output) * e * delta
+
+            # AEWGS
+            e = torch.round(input) - input
+
+            num_full = grad_output.sign() * e
+            den_full = e.square()
+
+            num = reduce_to_shape(num_full, scale).detach()
+            den = reduce_to_shape(den_full, scale).detach()
+
+            if dist.is_available() and dist.is_initialized():
+                dist.all_reduce(num, op=dist.ReduceOp.AVG)
+                dist.all_reduce(den, op=dist.ReduceOp.AVG)
+
+            delta = num / (den + 1e-6)
+
+            # prevent gradient vanish
+            g_scale = (delta * num_full).clamp_max(0.99) 
+            
+            grad_input = -grad_output * g_scale
+            
+
         if ctx.needs_input_grad[1]:
-            #grad_scale = grad_output * (torch.round(input) - input)
-            grad_scale = grad_output * (torch.randint(2, size=input.shape, dtype=input.dtype, device=input.device).sub(0.5))
-            #grad_scale = grad_output * torch.normal(0, 0.2888, size=input.shape, dtype=input.dtype, device=input.device)
-            #grad_scale = grad_output * (torch.rand_like(input).sub_(0.5))
+            # correct scaling accoring to https://arxiv.org/abs/2508.14004
+            grad_scale = (3.0 ** -0.5) * grad_output * (torch.randint(2, size=input.shape, dtype=input.dtype, device=input.device).sub(0.5))            
 
         return grad_input, grad_scale
+    
+
+
+def reduce_to_shape(t: Tensor, like: Tensor) -> Tensor:
+    dims_to_reduce = [i for i, size in enumerate(like.shape) if size == 1]
+    return  torch.mean(t, dim=tuple(dims_to_reduce), keepdim=True)
+
     
 def scaled_noise(x, s):
     return QNoise.apply(x, s)

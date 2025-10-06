@@ -61,7 +61,7 @@ class LVisionCls(pl.LightningModule):
         inputs, target = batch
         output = self.model(inputs)
         loss = self.criterion(output, target)
-        self.log("loss", loss, prog_bar=True)
+        self.log("loss", loss, prog_bar=True, sync_dist=True)
         return loss
 
     def validation_step(self, val_batch, val_index):
@@ -70,9 +70,9 @@ class LVisionCls(pl.LightningModule):
         val_loss = self.criterion(outputs, target)
         for name, metric in self.metrics:
             metric_value = metric(outputs, target)
-            self.log(f"{name}", metric_value, prog_bar=False)
+            self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
 
-        self.log("val_loss", val_loss, prog_bar=False)
+        self.log("val_loss", val_loss, prog_bar=False, sync_dist=True)
     
     def test_step(self, test_batch, test_index):
         inputs, target = test_batch
@@ -80,9 +80,9 @@ class LVisionCls(pl.LightningModule):
         val_loss = self.criterion(outputs, target)
         for name, metric in self.metrics:
             metric_value = metric(outputs, target)
-            self.log(f"{name}", metric_value, prog_bar=False)
+            self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
 
-        self.log("test_loss", val_loss, prog_bar=True)
+        self.log("test_loss", val_loss, prog_bar=True, sync_dist=True)
 
 
     def predict_step(self, pred_batch):
