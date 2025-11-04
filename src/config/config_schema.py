@@ -4,6 +4,7 @@ import src.models as compose_models
 import src.callbacks as compose_callbacks
 import src.quantization as compose_quantization
 from src.aux.types import QScheme, QMethod
+from src.quantization.rniq.config.config_schema import RNIQQuantizerParams
 
 from pydantic import BaseModel, field_validator
 from typing import Literal, Dict, Optional, List
@@ -43,17 +44,14 @@ class QuantizationConfig(BaseModel):
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    distillation: Optional[bool] = False    
-    distillation_loss: Optional[str] = "Cross-Entropy"
-    distillation_teacher: Optional[str] = None
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
-    params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
     fuse_batchnorm: Optional[bool] = True
     quantize_bias: Optional[bool] = True
     activation_zero_point: Optional[float] = 0.0
+    params: Optional[None | RNIQQuantizerParams] = None
 
 
 class DataConfig(BaseModel):

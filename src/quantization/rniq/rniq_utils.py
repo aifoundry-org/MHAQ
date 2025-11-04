@@ -5,3 +5,8 @@ class QMode(Enum):
         ROUND_VAL = 2
         SOURCE_VAL = 3
         FLOAT_TRAIN_VAL = 4
+
+class QNMethod(Enum):
+        STE = 0
+        EWGS = 1 
+        AEWGS = 2

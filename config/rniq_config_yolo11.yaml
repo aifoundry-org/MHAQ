@@ -48,8 +48,6 @@ quantization:
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 4
   weight_bit: 4
-  distillation: False
-  distillation_loss: Symmetrical KL
   excluded_layers:
     - 'net.p1.0.conv'
     - 'head.cls.2.4'
@@ -58,3 +56,6 @@ quantization:
   calibration:
     act_bit: 10
     weight_bit: 10
+  params:
+    distillation: False
+    distillation_loss: Symmetrical KL

@@ -138,6 +138,7 @@ class LVisionOD(pl.LightningModule):
         return loss
 
     def validation_step(self, val_batch, val_index):
+        val_loss = 0
         inputs, target = val_batch
         output = self.forward(inputs)
         if self.model._get_name() in YOLO_FAMILY:
@@ -147,6 +148,8 @@ class LVisionOD(pl.LightningModule):
             val_loss = self.criterion(output, target)
 
         self.mAP.update(output, target)
+
+        return val_loss
 
     def test_step(self, test_batch, test_index):
         inputs, target = test_batch
