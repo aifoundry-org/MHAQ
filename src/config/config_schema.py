@@ -4,13 +4,14 @@ import src.models as compose_models
 import src.callbacks as compose_callbacks
 import src.quantization as compose_quantization
 from src.aux.types import QScheme, QMethod
+from src.quantization.rniq.config.config_schema import RNIQQuantizerParams
 
 from pydantic import BaseModel, field_validator
 from typing import Literal, Dict, Optional, List
 
 
 class ModelConfig(BaseModel):
-    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "LM"]
+    type: Literal["VISION_CLS", "VISION_DNS", "VISION_SR", "VISION_OD", "LM"]
     name: str
     cpt_url: Optional[str] = None
     params: Dict
@@ -23,7 +24,7 @@ class Logger(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    criterion: str
+    criterion: str | List[str]
     optimizer: str
     learning_rate: float
     max_epochs: int
@@ -43,14 +44,14 @@ class QuantizationConfig(BaseModel):
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    distillation: Optional[bool] = False    
-    distillation_loss: Optional[str] = "Cross-Entropy"
-    distillation_teacher: Optional[str] = None
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
-    params: Optional[Dict] = None
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
+    fuse_batchnorm: Optional[bool] = True
+    quantize_bias: Optional[bool] = True
+    activation_zero_point: Optional[float] = 0.0
+    params: Optional[None | RNIQQuantizerParams] = None
 
 
 class DataConfig(BaseModel):
@@ -69,8 +70,8 @@ class ConfigSchema(BaseModel):
 
     @field_validator("training")
     def validate_training(cls, v):
-        if not hasattr(nn, v.criterion):
-            raise ValueError(f"Invalid criterion: {v.criterion}")
+        # if not hasattr(nn, v.criterion):
+            # raise ValueError(f"Invalid criterion: {v.criterion}")
         if not hasattr(optim, v.optimizer):
             raise ValueError(f"Invalid optimizer: {v.optimizer}")
         for callback in v.callbacks:

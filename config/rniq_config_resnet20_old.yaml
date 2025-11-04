@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20-rniq
-        note: "distilled 92.84"
+        note: "distilled 92.84 NO_BN, bias quant"
   callbacks:
     LayersWidthVis:
       params: {}
@@ -31,7 +31,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -45,12 +45,12 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 2
-  act_bit: 2
-  distillation: True
-  distillation_loss: Symmetrical KL
-  #distillation_teacher: resnet20_cifar10_new
+  weight_bit: 1
+  act_bit: 1
   freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
+  activation_zero_point: 0.0
   excluded_layers:
     - 'linear'
     - 'conv1'
@@ -59,3 +59,7 @@ quantization:
   calibration:
     act_bit: 10
     weight_bit: 10
+  params:
+    distillation: True
+    distillation_loss: Symmetrical KL
+    

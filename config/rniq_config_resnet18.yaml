@@ -49,11 +49,12 @@ quantization:
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 4
   weight_bit: 4
-  distillation: True
-  distillation_loss: Symmetrical KL
   excluded_layers:
     - 'conv1'
     - 'fc'
   calibration:
     act_bit: 10
     weight_bit: 10
+  params:
+    distillation: True
+    distillation_loss: Symmetrical KL
