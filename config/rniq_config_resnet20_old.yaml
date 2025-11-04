@@ -25,14 +25,13 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 100
+        patience: 50
         min_delta: 0.0001
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        auto_insert_metric_name: False
-        filename: rniq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
