@@ -23,7 +23,7 @@ training:
       params:
         monitor: mAP
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{mAP:.2f}"
+        filename: gdnsq_checkpoint-{epoch:02d}-"{mAP:.2f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -44,7 +44,7 @@ data:
 
 
 quantization:
-  name: RNIQQuant
+  name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 4
   weight_bit: 4

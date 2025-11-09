@@ -1,8 +1,8 @@
 import torch
 
-from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
-from src.quantization.rniq.layers.rniq_linear import NoisyLinear
-from src.quantization.rniq.layers.rniq_act import NoisyAct
+from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
+from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
+from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.loggers.default_logger import pl_logger
 from src.aux.traverse import previous_leaf
 import numpy as np

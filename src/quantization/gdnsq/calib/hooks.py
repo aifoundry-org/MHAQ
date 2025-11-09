@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from src.loggers.default_logger import logger
-from src.quantization.rniq.layers.rniq_act import NoisyAct
+from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 
 def forward_hook_register(module: nn.Module, hook):
     for c in module.named_children():

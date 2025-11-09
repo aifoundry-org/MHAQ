@@ -5,8 +5,8 @@ from typing import Tuple
 from torch import nn, inf
 
 from src.aux.types import QScheme
-from src.quantization.rniq.rniq import Quantizer
-from src.quantization.rniq.rniq_utils import QNMethod
+from src.quantization.gdnsq.gdnsq import Quantizer
+from src.quantization.gdnsq.gdnsq_utils import QNMethod
 from src.aux.qutils import is_biased
 
 

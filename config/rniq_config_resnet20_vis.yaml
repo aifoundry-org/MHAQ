@@ -15,7 +15,7 @@ training:
   loggers:
     WandbLogger:
       params:
-        name: resnet20-rniq
+        name: resnet20-gdnsq
         note: "VAL TEST"
  
   callbacks:
@@ -36,7 +36,7 @@ data:
 
 
 quantization:
-  name: RNIQQuant
+  name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 21
   weight_bit: 2

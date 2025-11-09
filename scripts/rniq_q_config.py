@@ -17,14 +17,14 @@ from src.training.trainer import Trainer
 torch.set_float32_matmul_precision('high')
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run RNIQ quantization.")
+    parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
     parser.add_argument(
         "--config", 
         type=str, 
         required=False, 
         help="Path to the configuration file (YAML).",
-        # default="config/rniq_config_yolo11.yaml"
-        default="config/rniq_config_resnet20_old.yaml"
+        # default="config/gdnsq_config_yolo11.yaml"
+        default="config/gdnsq_config_resnet20_old.yaml"
     )
     return parser.parse_args()
 

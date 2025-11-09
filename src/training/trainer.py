@@ -11,12 +11,12 @@ from lightning.pytorch.profilers import Profiler
 from lightning.pytorch.strategies import Strategy
 from lightning.pytorch.trainer.connectors.accelerator_connector import _LITERAL_WARN
 from src.loggers import WandbLogger, TensorBoardLogger
-from src.quantization.rniq.calib.minmaxobserver import (
+from src.quantization.gdnsq.calib.minmaxobserver import (
     MinMaxObserver,
     apply_mean_stats_activations,
     apply_quantile_weights_s,
 )
-from src.quantization.rniq.calib.hooks import register_lightning_activation_forward_hook
+from src.quantization.gdnsq.calib.hooks import register_lightning_activation_forward_hook
 
 from src import callbacks as compose_callbacks
 from src import loggers as compose_loggers

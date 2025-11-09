@@ -4,7 +4,7 @@ import src.models as compose_models
 import src.callbacks as compose_callbacks
 import src.quantization as compose_quantization
 from src.aux.types import QScheme, QMethod
-from src.quantization.rniq.config.config_schema import RNIQQuantizerParams
+from src.quantization.gdnsq.config.config_schema import GDNSQQuantizerParams
 
 from pydantic import BaseModel, field_validator
 from typing import Literal, Dict, Optional, List
@@ -43,7 +43,7 @@ class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
-    qmethod: QMethod = QMethod.RNIQ
+    qmethod: QMethod = QMethod.GDNSQ
     qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
@@ -51,7 +51,7 @@ class QuantizationConfig(BaseModel):
     fuse_batchnorm: Optional[bool] = True
     quantize_bias: Optional[bool] = True
     activation_zero_point: Optional[float] = 0.0
-    params: Optional[None | RNIQQuantizerParams] = None
+    params: Optional[None | GDNSQQuantizerParams] = None
 
 
 class DataConfig(BaseModel):

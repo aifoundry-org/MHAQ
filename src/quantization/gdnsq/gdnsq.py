@@ -4,7 +4,7 @@ from torch import Tensor
 from torch.autograd import Function
 import torch.distributed as dist
 
-from src.quantization.rniq.rniq_utils import QMode, QNMethod
+from src.quantization.gdnsq.gdnsq_utils import QMode, QNMethod
 
 
 class QNoise(Function):
@@ -150,7 +150,7 @@ class Quantizer:
         qnmethod: QNMethod=QNMethod.AEWGS
     ) -> None:
         """
-        Main quantizer for rniq method.
+        Main quantizer for gdnsq method.
 
         Args:
             scale (float): _description_
