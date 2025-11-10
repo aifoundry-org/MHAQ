@@ -6,6 +6,7 @@ from src.aux.types import QScheme
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
+from src.aux.qutils import is_biased
 
 class ModelHelper:
     @staticmethod
@@ -23,7 +24,7 @@ class ModelHelper:
                     min = module.weight.amin((1,2,3))
                     max = module.weight.amax((1,2,3))
 
-                    if module.bias:
+                    if is_biased(module):
                         min_b = module.bias.amin()
                         max_b = module.bias.amax()
                     else:

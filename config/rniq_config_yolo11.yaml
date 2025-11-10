@@ -9,8 +9,8 @@ training:
   criterion: yolo_loss
   optimizer: RAdam
   learning_rate: 0.0005
-  max_epochs: 40
-  val_every_n_epochs: 1
+  max_epochs: 100
+  val_every_n_epochs: 3
   log_every_n_steps: 10
   loggers:
     WandbLogger:
