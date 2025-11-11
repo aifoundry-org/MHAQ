@@ -13,6 +13,7 @@ from src.aux.types import MType
 from src.aux.find_root import find_project_root
 from src.models.compose.vision.vision_cls_module import LVisionCls
 from src.models.compose.vision.vision_od_module import LVisionOD
+from src.models.compose.vision.vision_sr_module import LVisionSR
 from src.models.compose.criterion import get_criterion
 
 current_file_path = Path(__file__).resolve()
@@ -67,7 +68,7 @@ class ModelComposer():
         elif self.model_type == MType.VISION_DNS:
             raise NotImplementedError()
         elif self.model_type == MType.VISION_SR:
-            raise NotImplementedError()
+            module = LVisionSR(self.__dict__)
         elif self.model_type == MType.LM:
             raise NotImplementedError()
         else:
