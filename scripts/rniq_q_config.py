@@ -24,7 +24,8 @@ def parse_args():
         required=False, 
         help="Path to the configuration file (YAML).",
         # default="config/gdnsq_config_yolo11.yaml"
-        default="config/gdnsq_config_resnet20_old.yaml"
+        # default="config/gdnsq_config_resnet20_old.yaml"
+        default="config/rniq_config_rfdn.yaml"
     )
     return parser.parse_args()
 

@@ -9,6 +9,7 @@ from .cls.imagenet_dali import ImageNetDALIDataModule as IMAGENET_DALI
 
 from .od.voc_yolo import YOLOVOCDataModule2012 as VOC2012_YOLO
 from .od.coco import COCODataModule as COCO
+from .sr.datamodule import SuperResolutionDataModule as SR
 
 __all__ = [
     "MNIST",
@@ -20,5 +21,6 @@ __all__ = [
     "IMAGENET",
     "IMAGENET_DALI",
     "VOC2012_YOLO",
-    "COCO"
+    "COCO",
+    "SR",
 ]
