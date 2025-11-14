@@ -53,10 +53,10 @@ def main():
     # Calibrating model initial weights and scales if defined in config
     trainer.calibrate(qmodel, datamodule=data)
 
-    # Finetune model
+    # # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
-    # Test model after quantization
+    # # Test model after quantization
     trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":

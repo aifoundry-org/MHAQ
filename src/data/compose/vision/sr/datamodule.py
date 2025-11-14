@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, Dict
 from lightning import pytorch as pl
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 
@@ -23,8 +23,9 @@ _BENCHMARK_REGISTRY = {
 class _SRPairDataset(Dataset):
     """Wraps the FolderByDir datasets to return (lr, hr) tensors."""
 
-    def __init__(self, dataset: Dataset) -> None:
+    def __init__(self, dataset: Dataset, dataset_name: str | None = None) -> None:
         self._dataset = dataset
+        self.dataset_name = dataset_name
 
     def __len__(self) -> int:
         return len(self._dataset)
@@ -38,6 +39,8 @@ class _SRPairDataset(Dataset):
             )
         hr = sample[0]
         lr = sample[1]
+        if self.dataset_name is not None:
+            return lr, hr, self.dataset_name
         return lr, hr
 
 
@@ -109,24 +112,24 @@ class SuperResolutionDataModule(pl.LightningDataModule):
                 predecode=not self.preload,
             )
 
-        for ds in self._benchmark_classes():
-            ds(
-                root=self.data_dir,
-                scale=self.scale,
-                split=self.benchmark_split,
-                transform=None,
-                download=True,
-                preload=self.preload,
-                predecode=not self.preload,
-            )
+        # for _, ds in self._benchmark_classes():
+        #     ds(
+        #         root=self.data_dir,
+        #         scale=self.scale,
+        #         split=self.benchmark_split,
+        #         transform=None,
+        #         download=True,
+        #         preload=self.preload,
+        #         predecode=not self.preload,
+        #     )
 
     def setup(self, stage: Optional[str] = None) -> None:
         if stage in (None, "fit"):
             if self.train_dataset is None:
                 self.train_dataset = self._build_train_dataset()
 
-        if stage in (None, "fit", "validate", "test", "predict"):
-            self._ensure_benchmark_dataset()
+        # if stage in (None, "fit", "validate", "test", "predict"):
+            # self._ensure_benchmark_dataset()
 
     def train_dataloader(self) -> DataLoader:
         if self.train_dataset is None:
@@ -141,17 +144,14 @@ class SuperResolutionDataModule(pl.LightningDataModule):
             prefetch_factor=self.prefetch_factor if self.num_workers > 0 else None,
         )
 
-    def val_dataloader(self) -> DataLoader:
-        dataset = self._ensure_benchmark_dataset()
-        return self._build_eval_loader(dataset)
+    def val_dataloader(self) -> Dict:
+        return self._build_val_datasets()
 
-    def test_dataloader(self) -> DataLoader:
-        dataset = self._ensure_benchmark_dataset()
-        return self._build_eval_loader(dataset)
+    def test_dataloader(self) -> Dict:
+        return self._build_val_datasets()
 
-    def predict_dataloader(self) -> DataLoader:
-        dataset = self._ensure_benchmark_dataset()
-        return self._build_eval_loader(dataset)
+    def predict_dataloader(self) -> Dict:
+        return self._build_val_datasets()
 
     def _build_train_dataset(self) -> Dataset:
         datasets: List[Dataset] = []
@@ -173,24 +173,27 @@ class SuperResolutionDataModule(pl.LightningDataModule):
             return datasets[0]
         return ConcatDataset(datasets)
 
-    def _build_benchmark_dataset(self, split: str) -> Dataset:
-        datasets = []
-        for dataset_cls in self._benchmark_classes():
-            ds = dataset_cls(
-                root=self.data_dir,
-                scale=self.scale,
-                split=split,
-                transform=self._build_eval_transform(),
-                download=self.download,
-                preload=self.preload,
-                predecode=not self.preload,
-            )
-            datasets.append(_SRPairDataset(ds))
+    def _build_val_datasets(self) -> dict:
+        datasets = {
+            "Set5": DataLoader(_SRPairDataset(Set5(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Set5"), batch_size=1),
+            "Set14": DataLoader(_SRPairDataset(Set14(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Set14"), batch_size=1),
+            "B100": DataLoader(_SRPairDataset(B100(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "B100"), batch_size=1),
+            "Urban100": DataLoader(_SRPairDataset(Urban100(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Urban100"), batch_size=1)
+        }
+        # for dataset_name, dataset_cls in self._benchmark_classes():
+        #     ds = dataset_cls(
+        #         root=self.data_dir,
+        #         scale=self.scale,
+        #         split=split,
+        #         transform=self._build_eval_transform(),
+        #         download=self.download,
+        #         preload=self.preload,
+        #         predecode=not self.preload,
+        #     )
+        #     datasets[dataset_name] = ds
         if not datasets:
             raise RuntimeError("No benchmark datasets configured for SR evaluation.")
-        if len(datasets) == 1:
-            return datasets[0]
-        return ConcatDataset(datasets)
+        return datasets
 
     def _build_eval_loader(self, dataset: Dataset) -> DataLoader:
         return DataLoader(
@@ -224,18 +227,18 @@ class SuperResolutionDataModule(pl.LightningDataModule):
             ]
         )
 
-    def _ensure_benchmark_dataset(self) -> Dataset:
-        if self._benchmark_dataset is None:
-            self._benchmark_dataset = self._build_benchmark_dataset(self.benchmark_split)
-        return self._benchmark_dataset
+    # def _ensure_benchmark_dataset(self) -> Dataset:
+    #     if self._benchmark_dataset is None:
+    #         self._benchmark_dataset = self._build_benchmark_datasets(self.benchmark_split)
+    #     return self._benchmark_dataset
 
-    def _benchmark_classes(self):
-        for name in self.benchmark_sets:
-            key = name if isinstance(name, str) else str(name)
-            dataset_cls = _BENCHMARK_REGISTRY.get(key)
-            if dataset_cls is None:
-                raise ValueError(
-                    f"Unknown super-resolution benchmark dataset '{name}'. "
-                    f"Available options: {list(_BENCHMARK_REGISTRY.keys())}"
-                )
-            yield dataset_cls
+    # def _benchmark_classes(self):
+    #     for name in self.benchmark_sets:
+    #         key = name if isinstance(name, str) else str(name)
+    #         dataset_cls = _BENCHMARK_REGISTRY.get(key)
+    #         if dataset_cls is None:
+    #             raise ValueError(
+    #                 f"Unknown super-resolution benchmark dataset '{name}'. "
+    #                 f"Available options: {list(_BENCHMARK_REGISTRY.keys())}"
+    #             )
+    #         yield key, dataset_cls

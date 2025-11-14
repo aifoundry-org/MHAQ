@@ -82,7 +82,8 @@ def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channe
                 wbits = max_bits
 
             # XXX: handle max-min == 0
-            log_s = torch.max(torch.tensor(m.log_wght_s), torch.log2((max - min) / (2**wbits - 1)).reshape(m.log_wght_s.shape))
+            # log_s = torch.max(torch.tensor(m.log_wght_s), torch.log2((max - min) / (2**wbits - 1)).reshape(m.log_wght_s.shape))
+            log_s = torch.max(m.log_wght_s.clone().detach().requires_grad_(True), torch.log2((max - min) / (2**wbits - 1)).reshape(m.log_wght_s.shape))
 
             #m.log_wght_s = torch.nn.Parameter(torch.full(m.log_wght_s.shape, log_s), requires_grad=m.log_wght_s.requires_grad) # per-tensor
             m.log_wght_s = torch.nn.Parameter(log_s, requires_grad=m.log_wght_s.requires_grad)

@@ -11,6 +11,7 @@ from lightning.pytorch.profilers import Profiler
 from lightning.pytorch.strategies import Strategy
 from lightning.pytorch.trainer.connectors.accelerator_connector import _LITERAL_WARN
 from src.loggers import WandbLogger, TensorBoardLogger
+from src.training.loops import SrEvalLoop
 from src.quantization.gdnsq.calib.minmaxobserver import (
     MinMaxObserver,
     apply_mean_stats_activations,
@@ -154,6 +155,15 @@ class Trainer(pl.Trainer):
             reload_dataloaders_every_n_epochs=reload_dataloaders_every_n_epochs,
             default_root_dir=default_root_dir,
         )
+
+        if config:
+            if config.model.type == "VISION_SR":
+                sr_loop = SrEvalLoop(trainer=self.validate_loop.trainer,
+                                     trainer_fn=self.validate_loop._trainer_fn,
+                                     stage=self.validate_loop._stage,
+                                     verbose=self.validate_loop.verbose,
+                                     inference_mode=self.validate_loop.inference_mode)
+                self.validate_loop = sr_loop
 
     def calibrate(
         self,

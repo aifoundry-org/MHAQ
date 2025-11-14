@@ -42,6 +42,9 @@ data:
   data_dir: ./data/
   batch_size: 24
   num_workers: 8
+  params:
+    denormalize: True
+    to_luminance: True
 
 
 quantization:

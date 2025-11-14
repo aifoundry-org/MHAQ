@@ -385,3 +385,7 @@ class GaussianBlur(nn.Module):
             k_y = max(2*int(math.ceil(3*sigma_y))+1, 3)
             kernel_size = (k_x, k_y)
         return apply_all(x, lambda y: F.gaussian_blur(y, kernel_size, sigma))
+
+def to_luminance(t):
+    coeffs = torch.tensor([65.738, 129.057, 25.064]).reshape(1, 3, 1, 1).to(t.device) / 256
+    return t.mul(coeffs).sum(dim=1, keepdim=True)
