@@ -112,24 +112,10 @@ class SuperResolutionDataModule(pl.LightningDataModule):
                 predecode=not self.preload,
             )
 
-        # for _, ds in self._benchmark_classes():
-        #     ds(
-        #         root=self.data_dir,
-        #         scale=self.scale,
-        #         split=self.benchmark_split,
-        #         transform=None,
-        #         download=True,
-        #         preload=self.preload,
-        #         predecode=not self.preload,
-        #     )
-
     def setup(self, stage: Optional[str] = None) -> None:
         if stage in (None, "fit"):
             if self.train_dataset is None:
                 self.train_dataset = self._build_train_dataset()
-
-        # if stage in (None, "fit", "validate", "test", "predict"):
-            # self._ensure_benchmark_dataset()
 
     def train_dataloader(self) -> DataLoader:
         if self.train_dataset is None:
@@ -174,26 +160,28 @@ class SuperResolutionDataModule(pl.LightningDataModule):
         return ConcatDataset(datasets)
 
     def _build_val_datasets(self) -> dict:
-        datasets = {
-            "Set5": DataLoader(_SRPairDataset(Set5(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Set5"), batch_size=1),
-            "Set14": DataLoader(_SRPairDataset(Set14(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Set14"), batch_size=1),
-            "B100": DataLoader(_SRPairDataset(B100(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "B100"), batch_size=1),
-            "Urban100": DataLoader(_SRPairDataset(Urban100(root=self.data_dir, scale=self.scale, download=self.download, transform=self._build_eval_transform()), "Urban100"), batch_size=1)
-        }
-        # for dataset_name, dataset_cls in self._benchmark_classes():
-        #     ds = dataset_cls(
-        #         root=self.data_dir,
-        #         scale=self.scale,
-        #         split=split,
-        #         transform=self._build_eval_transform(),
-        #         download=self.download,
-        #         preload=self.preload,
-        #         predecode=not self.preload,
-        #     )
-        #     datasets[dataset_name] = ds
-        if not datasets:
+        transform = self._build_eval_transform()
+        loaders: Dict[str, DataLoader] = {}
+        benchmarks = [
+            ("Set5", Set5),
+            ("Set14", Set14),
+            ("B100", B100),
+            ("Urban100", Urban100),
+        ]
+        for name, dataset_cls in benchmarks:
+            dataset = dataset_cls(
+                root=self.data_dir,
+                scale=self.scale,
+                transform=transform,
+                download=self.download,
+                preload=self.preload,
+                predecode=not self.preload,
+            )
+            loaders[name] = self._build_eval_loader(_SRPairDataset(dataset, name))
+
+        if not loaders:
             raise RuntimeError("No benchmark datasets configured for SR evaluation.")
-        return datasets
+        return loaders
 
     def _build_eval_loader(self, dataset: Dataset) -> DataLoader:
         return DataLoader(
@@ -226,19 +214,3 @@ class SuperResolutionDataModule(pl.LightningDataModule):
                 ToTensor(),
             ]
         )
-
-    # def _ensure_benchmark_dataset(self) -> Dataset:
-    #     if self._benchmark_dataset is None:
-    #         self._benchmark_dataset = self._build_benchmark_datasets(self.benchmark_split)
-    #     return self._benchmark_dataset
-
-    # def _benchmark_classes(self):
-    #     for name in self.benchmark_sets:
-    #         key = name if isinstance(name, str) else str(name)
-    #         dataset_cls = _BENCHMARK_REGISTRY.get(key)
-    #         if dataset_cls is None:
-    #             raise ValueError(
-    #                 f"Unknown super-resolution benchmark dataset '{name}'. "
-    #                 f"Available options: {list(_BENCHMARK_REGISTRY.keys())}"
-    #             )
-    #         yield key, dataset_cls

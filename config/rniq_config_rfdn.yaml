@@ -22,9 +22,9 @@ training:
   callbacks:
     ModelCheckpoint:
       params:
-        monitor: PSNR
-        mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR:.4f}"
+        monitor: Loss
+        mode: min
+        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Set5:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -32,8 +32,8 @@ training:
         warmup: 500
     NoiseEarlyStopping:
       params:
-        monitor: PSNR
-        mode: max
+        monitor: Loss
+        mode: min
         patience: 5
         min_delta: 0.001
 
