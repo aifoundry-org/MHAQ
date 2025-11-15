@@ -2,8 +2,11 @@ from collections import defaultdict
 from typing import Any, Dict, Tuple
 from src.data.compose.vision.sr.transforms.transforms import to_luminance
 
+
+
 import lightning.pytorch as pl
 import torchmetrics
+import piq
 
 class LVisionSR(pl.LightningModule):
     def __init__(self, setup: Dict, *args: Any, **kwargs: Any) -> None:
@@ -24,12 +27,8 @@ class LVisionSR(pl.LightningModule):
         self._data_range = model_params.get("data_range", 1.0)
 
         self._metrics = {
-            "PSNR": torchmetrics.PeakSignalNoiseRatio(
-                data_range=self._data_range
-            ),
-            "SSIM": torchmetrics.StructuralSimilarityIndexMeasure(
-                data_range=self._data_range
-            ),
+            "PSNR": piq.psnr,
+            "SSIM": piq.ssim,
         }
         self._stage_metrics: Dict[str, Dict[str, Dict[str, torchmetrics.Metric]]] = defaultdict(dict)
 
@@ -93,7 +92,7 @@ class LVisionSR(pl.LightningModule):
         # dataset_key = dataset_name or f"loader_{loader_idx}"
         metrics = self._get_metrics(stage, "")
         for metric_name, metric in metrics.items():
-            metric.to(batch[0].device)
+            # metric.to(batch[0].device)
             metric_value = metric(outputs, target)
             self.log(
                 f"{metric_name}/{dataset_name}",
@@ -128,10 +127,11 @@ class LVisionSR(pl.LightningModule):
 
     def validation_step(self, val_batch, val_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(val_batch)
+        outputs = outputs.clamp(0,1)  # rounding pixel values ..
+        # outputs = outputs.mul(255).round().div(255)
         if self.to_luminance:
             outputs = to_luminance(outputs)
             target = to_luminance(target)
-        outputs = outputs.clamp(0,1)  # rounding pixel values ..
         self._log_dataset_metrics(
             stage="val",
             batch=val_batch,
@@ -143,7 +143,7 @@ class LVisionSR(pl.LightningModule):
         )
         return loss
 
-    def test_step(self, test_batch, test_index):
+    def test_step(self, test_batch, test_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(test_batch)
         self._log_dataset_metrics(
             stage="test",
@@ -152,7 +152,7 @@ class LVisionSR(pl.LightningModule):
             target=target,
             loss=loss,
             dataset_name=dataset_name,
-            loader_idx=test_index,
+            loader_idx=dataloader_idx,
         )
         return loss
 

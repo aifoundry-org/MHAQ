@@ -10,8 +10,8 @@ training:
   criterion: L1Loss
   optimizer: RAdam
   learning_rate: 0.0005
-  max_epochs: 100
-  val_every_n_epochs: 3
+  max_epochs: 1500
+  val_every_n_epochs: 10
   log_every_n_steps: 10
   loggers:
     WandbLogger:
