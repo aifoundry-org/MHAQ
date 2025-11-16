@@ -26,13 +26,14 @@ class NoiseModelCheckpoint(ModelCheckpoint):
         save_on_exception: bool = False,
         save_weights_only: bool = False,
         mode: str = "min",
-        auto_insert_metric_name: bool = True,
+        auto_insert_metric_name: bool = False,
         every_n_train_steps: int | None = None,
         train_time_interval: timedelta | None = None,
         every_n_epochs: int | None = None,
-        save_on_train_epoch_end: bool | None = None,
+        save_on_train_epoch_end: bool | None = False,
         enable_version_counter: bool = True,
     ):
+        save_on_train_epoch_end = False
         super().__init__(
             dirpath,
             filename,
@@ -63,11 +64,11 @@ class NoiseModelCheckpoint(ModelCheckpoint):
             log.info(message)
 
     @override
-    def on_validation_epoch_end(
+    def on_validation_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
         if self.tracking_metric:
-            return super().on_validation_epoch_end(trainer, pl_module)
+            return super().on_validation_end(trainer, pl_module)
 
         try:
             if model_stats.is_converged(pl_module):

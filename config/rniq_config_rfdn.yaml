@@ -10,7 +10,7 @@ training:
   criterion: L1Loss
   optimizer: RAdam
   learning_rate: 0.0005
-  max_epochs: 1500
+  max_epochs: 2000
   val_every_n_epochs: 10
   log_every_n_steps: 10
   loggers:
@@ -24,7 +24,7 @@ training:
       params:
         monitor: PSNR/Weighted_mean
         mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Weighted_mean}"
+        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Weighted_mean:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
