@@ -161,6 +161,9 @@ class LVisionSR(pl.LightningModule):
     def test_step(self, test_batch, test_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(test_batch)
         outputs = outputs.clamp(0,1) 
+        if self.to_luminance:
+            outputs = to_luminance(outputs)
+            target = to_luminance(target)
         self._log_dataset_metrics(
             stage="test",
             batch=test_batch,
