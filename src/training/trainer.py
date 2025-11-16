@@ -163,7 +163,14 @@ class Trainer(pl.Trainer):
                                      stage=self.validate_loop._stage,
                                      verbose=self.validate_loop.verbose,
                                      inference_mode=self.validate_loop.inference_mode)
+                sr_loop_test = SrEvalLoop(trainer=self.test_loop.trainer,
+                                     trainer_fn=self.test_loop._trainer_fn,
+                                     stage=self.test_loop._stage,
+                                     verbose=self.test_loop.verbose,
+                                     inference_mode=self.test_loop.inference_mode)
+
                 self.validate_loop = sr_loop
+                self.test_loop = sr_loop_test
 
     def calibrate(
         self,

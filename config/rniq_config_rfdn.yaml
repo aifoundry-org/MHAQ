@@ -20,11 +20,11 @@ training:
         note: "signed activations + calibration"
  
   callbacks:
-    ModelCheckpoint:
+    NoiseModelCheckpoint:
       params:
-        monitor: Loss
-        mode: min
-        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Set5:.4f}"
+        monitor: PSNR/Weighted_mean
+        mode: max
+        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Weighted_mean}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -34,8 +34,8 @@ training:
       params:
         monitor: Loss
         mode: min
-        patience: 5
-        min_delta: 0.001
+        patience: 80
+        min_delta: 0.00005
 
 data:
   dataset_name: SR

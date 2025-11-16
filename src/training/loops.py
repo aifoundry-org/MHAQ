@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 
+from collections import ChainMap, OrderedDict, defaultdict
 from typing import Any
 from torch import Tensor
 from lightning_utilities.core.apply_func import apply_to_collection
@@ -11,6 +12,40 @@ from lightning.pytorch.callbacks.progress.rich_progress import _RICH_AVAILABLE
 
 
 class SrEvalLoop(_EvaluationLoop):
+    def on_run_end(self) -> list[dict[str, Tensor]]:
+        """Runs the ``_on_evaluation_epoch_end`` hook."""
+        # if `done` returned True before any iterations were done, this won't have been called in `on_advance_end`
+        self.trainer._logger_connector.epoch_end_reached()
+        self.trainer._logger_connector._evaluation_epoch_end()
+
+        # hook
+        self._on_evaluation_epoch_end()
+
+        logged_outputs, self._logged_outputs = self._logged_outputs, []  # free memory
+        # include any logged outputs on epoch_end
+        epoch_end_logged_outputs = self.trainer._logger_connector.update_eval_epoch_metrics()
+        all_logged_outputs = dict(ChainMap(*logged_outputs))  # list[dict] -> dict
+        all_logged_outputs.update(epoch_end_logged_outputs)
+
+        # for dl_outputs in logged_outputs:
+            # dl_outputs.update(epoch_end_logged_outputs)
+        
+        logged_outputs.append(epoch_end_logged_outputs)
+
+        # log metrics
+        self.trainer._logger_connector.log_eval_end_metrics(all_logged_outputs)
+
+        # hook
+        self._on_evaluation_end()
+
+        # enable train mode again
+        self._on_evaluation_model_train()
+
+        if self.verbose and self.trainer.is_global_zero:
+            self._print_results(logged_outputs, self._stage.value)
+
+        return logged_outputs
+
     @staticmethod
     def _print_results(results: list[dict[str, Tensor]], stage: str) -> None:
          # remove the dl idx suffix

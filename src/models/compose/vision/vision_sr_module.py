@@ -31,6 +31,14 @@ class LVisionSR(pl.LightningModule):
             "SSIM": piq.ssim,
         }
         self._stage_metrics: Dict[str, Dict[str, Dict[str, torchmetrics.Metric]]] = defaultdict(dict)
+        self._stage_psnr_sums: Dict[str, Dict[str, float]] = {
+            "val": defaultdict(float),
+            "test": defaultdict(float),
+        }
+        self._stage_psnr_counts: Dict[str, Dict[str, float]] = {
+            "val": defaultdict(float),
+            "test": defaultdict(float),
+        }
 
     def configure_optimizers(self):
         return self.optimizer(self.parameters(), self.lr)
@@ -103,11 +111,18 @@ class LVisionSR(pl.LightningModule):
                 batch_size=batch_size,
                 add_dataloader_idx=False
             )
+            if metric_name == "PSNR" and dataset_name and stage in self._stage_psnr_sums:
+                psnr_scalar = metric_value.detach()
+                if psnr_scalar.numel() > 1:
+                    psnr_scalar = psnr_scalar.mean()
+                psnr_scalar = psnr_scalar.item()
+                self._stage_psnr_sums[stage][dataset_name] += psnr_scalar * batch_size
+                self._stage_psnr_counts[stage][dataset_name] += batch_size
         self.log(
             f"Val_loss/{dataset_name}",
             loss,
             prog_bar=False,
-            on_step=False,
+            on_step=True,
             on_epoch=True,
             batch_size=batch_size,
             add_dataloader_idx=False
@@ -145,6 +160,7 @@ class LVisionSR(pl.LightningModule):
 
     def test_step(self, test_batch, test_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(test_batch)
+        outputs = outputs.clamp(0,1) 
         self._log_dataset_metrics(
             stage="test",
             batch=test_batch,
@@ -158,4 +174,46 @@ class LVisionSR(pl.LightningModule):
 
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
         inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
-        return self.forward(inputs)
+        return self.forward(inputs).clamp(0,1)
+
+    def on_validation_epoch_start(self) -> None:
+        self._reset_stage_psnr_tracking("val")
+
+    def on_validation_epoch_end(self) -> None:
+        self._log_weighted_psnr(stage="val", log_name="PSNR/Weighted_mean", prog_bar=False)
+
+    def on_test_epoch_start(self) -> None:
+        self._reset_stage_psnr_tracking("test")
+
+    def on_test_epoch_end(self) -> None:
+        self._log_weighted_psnr(stage="test", log_name="PSNR/Weighted_mean_test", prog_bar=False)
+
+    def _reset_stage_psnr_tracking(self, stage: str) -> None:
+        if stage in self._stage_psnr_sums:
+            self._stage_psnr_sums[stage].clear()
+            self._stage_psnr_counts[stage].clear()
+
+    def _log_weighted_psnr(self, stage: str, log_name: str, prog_bar: bool) -> None:
+        if stage not in self._stage_psnr_sums:
+            return
+        sums = self._stage_psnr_sums[stage]
+        counts = self._stage_psnr_counts[stage]
+        weighted_sum = 0.0
+        weight_total = 0.0
+        for dataset_name, total_value in sums.items():
+            count = counts.get(dataset_name, 0.0)
+            if not dataset_name or count == 0:
+                continue
+            dataset_avg = total_value / count
+            dataset_weight = 1.0 / count
+            weighted_sum += dataset_avg * dataset_weight
+            weight_total += dataset_weight
+        if weight_total > 0:
+            weighted_psnr = weighted_sum / weight_total
+            self.log(
+                log_name,
+                weighted_psnr,
+                prog_bar=prog_bar,
+                on_step=False,
+                on_epoch=True,
+            )
