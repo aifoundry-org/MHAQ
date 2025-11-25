@@ -48,7 +48,7 @@ def main():
     qmodel = quantizer.quantize(model, in_place=True)
 
     # Validate model after layers replacement
-    trainer.validate(qmodel, datamodule=data)
+    # trainer.validate(qmodel, datamodule=data)
   
     # Calibrating model initial weights and scales if defined in config
     trainer.calibrate(qmodel, datamodule=data)

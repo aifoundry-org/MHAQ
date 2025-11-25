@@ -111,15 +111,14 @@ class GDNSQQuant(BaseQuant):
             qmodel.training_step = GDNSQQuant.distillation_noisy_training_step.__get__(
                 qmodel, type(qmodel)
             )
-            qmodel.validation_step = GDNSQQuant.noisy_validation_step.__get__(
-                qmodel, type(qmodel)
-            )
+            # qmodel.validation_step = GDNSQQuant.noisy_validation_step.__get__(
+                # qmodel, type(qmodel)
+            # )
         else:
             qmodel.training_step = GDNSQQuant.noisy_train_decorator(qmodel.training_step)
-            qmodel.validation_step = GDNSQQuant.noisy_val_decorator(
-                qmodel.validation_step
-            )
+            # qmodel.validation_step = GDNSQQuant.noisy_val_decorator(qmodel.validation_step)
 
+        qmodel.validation_step = GDNSQQuant.noisy_val_decorator(qmodel.validation_step)
         qmodel.test_step = GDNSQQuant.noisy_test_decorator(qmodel.test_step)
 
         # Replacing layers directly

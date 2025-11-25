@@ -22,7 +22,7 @@ class NoiseModelCheckpoint(ModelCheckpoint):
         monitor: str | None = None,
         verbose: bool = False,
         save_last: bool | None | Literal["link"] = None,
-        save_top_k: int = 1,
+        save_top_k: int = 3,
         save_on_exception: bool = False,
         save_weights_only: bool = False,
         mode: str = "min",
