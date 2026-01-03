@@ -1,9 +1,17 @@
 import torch
 from torch import nn, inf
+import torch.nn.functional as F
 
 from src.aux.types import QScheme
 from src.quantization.rniq.rniq import Quantizer
 from src.quantization.rniq.utils.enums import QMode
+
+def softclamp(x, l, h, s_l, s_h):
+    # s must be > 0. If you want to train it, pass s = softplus(s_raw) + eps
+    s_l = F.softplus(s_l)
+    s_h = F.softplus(s_h)
+
+    return l + F.softplus(s_l*(x - l)) / s_l - F.softplus(s_h*(x - h)) / s_h
 
 
 class NoisyAct(nn.Module):
@@ -15,6 +23,9 @@ class NoisyAct(nn.Module):
         self._log_act_s = torch.tensor([init_s]).float()
         self._log_act_q = torch.tensor([init_q]).float()
         self._noise_ratio = torch.tensor(noise_ratio)
+        #self._act_smooth_l = torch.tensor([50.0]).float()
+        #self._act_smooth_h = torch.tensor([50.0]).float()
+
         self.log_act_q = torch.nn.Parameter(self._log_act_q, requires_grad=True)
         if signed:
             self.act_b = torch.nn.Parameter(self._act_b, requires_grad=True)
@@ -22,6 +33,8 @@ class NoisyAct(nn.Module):
             self.act_b = torch.nn.Parameter(self._act_b, requires_grad=False)
 
         self.log_act_s = torch.nn.Parameter(self._log_act_s, requires_grad=True)
+        #self.act_smooth_l = torch.nn.Parameter(self._act_smooth_l, requires_grad=True)
+        #self.act_smooth_h = torch.nn.Parameter(self._act_smooth_h, requires_grad=True)
         self.Q = Quantizer(self, torch.exp2(self._log_act_s), 0, -inf, inf)
         self.bw = torch.tensor(0.0)
 
@@ -35,6 +48,8 @@ class NoisyAct(nn.Module):
         self.Q.min_val = self.act_b
         self.Q.max_val = self.act_b + q - s
         self.Q.scale = s
+
+        #x = softclamp(x, self.Q.min_val, self.Q.max_val, self.act_smooth_l, self.act_smooth_h)
 
         q = self.Q.quantize(x)
         if not self.training: 
