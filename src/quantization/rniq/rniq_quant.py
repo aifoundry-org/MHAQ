@@ -15,6 +15,7 @@ from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
 from src.aux.loss.distill_ce import CrossEntropyLoss
 from src.aux.loss.symm_kl_loss import SymmetricalKL
+from src.aux.loss.symm_focal_jeffreys_loss import SymmetricFocalJeffreys
 from src.aux.loss.kl_loss import KL
 from src.aux.loss.jsdloss import JSDLoss
 
@@ -50,6 +51,8 @@ class RNIQQuant(BaseQuant):
                 return SymmetricalKL()
             elif config_loss == "JSD":
                 return JSDLoss()
+            elif config_loss == "SymmetricFocalJeffreys":
+                return SymmetricFocalJeffreys()
             else:
                 raise NotImplementedError("Loss type are invalid! \
                                           Valid options are: \
