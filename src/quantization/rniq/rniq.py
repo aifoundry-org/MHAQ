@@ -40,28 +40,41 @@ class QNoise(Function):
 
             # EWGS
             # e = torch.round(input) - input
-            # extra gradient so that total grad to x becomes
-            # g + delta * |g| * (x - round(x))  (i.e., EWGS Eq. (4))
+            # #extra gradient so that total grad to x becomes
+            # #g + delta * |g| * (x - round(x))  (i.e., EWGS Eq. (4))
+            # num_full = grad_output.sign() * e
             # delta = 1e-2
-            # grad_input = -torch.abs(grad_output) * e * delta
+            # gap = 0.22
+            # # prevent gradient vanish
+            # g_scale = (delta * num_full).clamp_max(1-gap) 
+            
+            # grad_input = -grad_output * g_scale
 
             # AEWGS
             e = torch.round(input) - input
 
             num_full = grad_output.sign() * e
-            den_full = e.square()
+            e2_full = e.square()
 
             num = reduce_to_shape(num_full, scale).detach()
-            den = reduce_to_shape(den_full, scale).detach()
+            e2 = reduce_to_shape(e2_full, scale).detach()
+            me = reduce_to_shape(e, scale).detach()
 
             if dist.is_available() and dist.is_initialized():
                 dist.all_reduce(num, op=dist.ReduceOp.AVG)
-                dist.all_reduce(den, op=dist.ReduceOp.AVG)
+                dist.all_reduce(e2, op=dist.ReduceOp.AVG)
+                dist.all_reduce(me, op=dist.ReduceOp.AVG)
 
-            delta = num / (den + 1e-6)
-
+            eps = 1e-3
+            den0 = 1.0 / 12.0
+            den = (e2 - me.square()).clamp_min(eps)
+            #den = ((e2 - me.square()).abs()*den0).sqrt() + eps
+            delta = num / den
+            
+            gap = 0
+            m = 0.5
             # prevent gradient vanish
-            g_scale = (delta * num_full).clamp_max(0.99) 
+            g_scale = (m * delta * num_full).clamp_max(1-gap) 
             
             grad_input = -grad_output * g_scale
             
