@@ -7,20 +7,34 @@ from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
 from src.quantization.rniq.layers.rniq_linear import NoisyLinear
 from src.quantization.rniq.layers.rniq_act import NoisyAct
 
+
+def iso_fro_loss(W: torch.Tensor, eps: float = 1e-8):
+    C_out = W.shape[0]
+    W2 = W.view(C_out, -1)
+    scale = (W2.norm(p='fro')**2 / max(C_out,1)).clamp_min(eps)
+    G = (W2 @ W2.t()) / scale
+    I = torch.eye(C_out, device=W.device, dtype=W.dtype)
+    return ((G - I)**2).sum()
+
 class ModelHelper:
     @staticmethod
     def get_model_values(model: nn.Module, qscheme: QScheme = QScheme.PER_TENSOR):
-        log_wght_s, log_w_n_b, log_act_q, log_act_s = [], [], [], []
+        log_wght_s, log_w_n_b, log_act_q, log_act_s, balance = [], [], [], [], []
+
 
         # Helper to handle log_s and log_w_n_b collection
         def collect_log_weights(module):
             if module.log_wght_s.requires_grad:
                 # add 0.5 bit gap to prevent overflow
                 if qscheme == QScheme.PER_CHANNEL:
+                    #bal = iso_fro_loss(module.weight)
+                    #balance.append(bal.ravel())
                     log_wght_s.append(module.log_wght_s.ravel())
                     min = module.weight.amin((1,2,3))
                     max = module.weight.amax((1,2,3))
                 elif qscheme == QScheme.PER_TENSOR:
+                    #bal = iso_fro_loss(module.weight).mean()                    
+                    #balance.append(bal)
                     log_wght_s.append(module.log_wght_s)
                     min = module.weight.amin()
                     max = module.weight.amax()
@@ -47,14 +61,16 @@ class ModelHelper:
                 torch.stack(log_act_s).ravel(),
                 torch.stack(log_act_q).ravel(),
                 torch.stack(log_wght_s).ravel(),
-                torch.stack(log_w_n_b).ravel()
+                torch.stack(log_w_n_b).ravel(),
+                #torch.stack(balance).ravel()
             )
         elif qscheme == QScheme.PER_CHANNEL:
             res = (
                 torch.cat(log_act_s),
                 torch.cat(log_act_q),
                 torch.cat(log_wght_s),
-                torch.cat(log_w_n_b)
+                torch.cat(log_w_n_b),
+                #torch.cat(balance)
             )
 
         return res

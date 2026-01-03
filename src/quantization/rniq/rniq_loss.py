@@ -45,6 +45,7 @@ class PotentialLoss(nn.Module):
         laq = output[2]  # log_act_q
         lws = output[3]  # log_wght_s
         lwq = output[4]  # log_w
+        #bal = output[5]  # sign balance
 
         self.base_loss = self.criterion(prd, target)
         loss = self.base_loss
@@ -66,6 +67,7 @@ class PotentialLoss(nn.Module):
         wmul = (wact + self.l_eps) / (wact + aact + self.l_eps)
         amul = (aact + self.l_eps) / (wact + aact + self.l_eps)
 
+        #rloss = (loss + 0.001*wmul*bal.mean()).pow_(self.p)
         l1, l2 = (1.0, self.t) if self.lossless else (self.t, 1.0)
 
         ploss = calib_mul * l1 * (wmul * wloss + amul * aloss) + l2 * rloss
