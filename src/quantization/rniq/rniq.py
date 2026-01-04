@@ -147,7 +147,8 @@ class Quantizer:
         min_val: torch.Tensor,
         max_val: torch.Tensor,
         rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,]),
-        qnmethod: QNMethod=QNMethod.AEWGS
+        # qnmethod: QNMethod=QNMethod.AEWGS
+        qnmethod: QNMethod=QNMethod.STE
     ) -> None:
         """
         Main quantizer for rniq method.
@@ -166,7 +167,8 @@ class Quantizer:
         self.max_val = max_val
         self.rnoise_ratio = torch.Tensor([rnoise_ratio])
         self.positive_scale = torch.all(torch.as_tensor(self.scale) > 0).item()
-        self.qnmethod = qnmethod
+        # self.qnmethod = qnmethod
+        self.qnmethod = QNMethod.STE
 
     def quantize(self, value):
         """

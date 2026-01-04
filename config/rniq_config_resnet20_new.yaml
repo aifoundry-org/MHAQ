@@ -47,6 +47,8 @@ quantization:
   weight_bit: 4
   act_bit: 4
   freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'

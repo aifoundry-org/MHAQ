@@ -141,8 +141,8 @@ def val_count(q):
 def get_layer_wnb_bit_width(
     layer_weights: torch.Tensor,
     log_s: torch.Tensor,
-    layer_bias: torch.Tensor | None = None,
-    log_b_s: torch.Tensor | None = None,
+    # layer_bias: torch.Tensor | None = None,
+    # log_b_s: torch.Tensor | None = None,
     config=QScheme.PER_TENSOR,
 ):
     # add 0.5 bit gap to prevent overflow
@@ -150,21 +150,22 @@ def get_layer_wnb_bit_width(
         min = layer_weights.amin()
         max = layer_weights.amax()
 
-        min_b = layer_bias.amin()
-        max_b = layer_bias.amax()
+        # min_b = layer_bias.amin()
+        # max_b = layer_bias.amax()
     elif config == QScheme.PER_CHANNEL:
         min = layer_weights.amin((1, 2, 3))
         max = layer_weights.amax((1, 2, 3))
 
-        min_b = layer_bias.amin()
-        max_b = layer_bias.amax()
+        # min_b = layer_bias.amin()
+        # max_b = layer_bias.amax()
 
     # add 1 lsb gap to prevent overflow
     log_q = torch.log2((max - min).reshape(log_s.shape) + torch.exp2(log_s))
-    log_q_b = torch.log2(
-        (max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
+    # log_q_b = torch.log2(
+        # (max_b - min_b).reshape(log_b_s.shape) + torch.exp2(log_b_s))
 
-    return (get_activations_bit_width(log_q, log_s, 0) + get_activations_bit_width(log_q_b, log_b_s, 0)) / 2
+    # return (get_activations_bit_width(log_q, log_s, 0) + get_activations_bit_width(log_q_b, log_b_s, 0)) / 2
+    return (get_activations_bit_width(log_q, log_s, 0))
 
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
@@ -214,10 +215,10 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
     bit_widths = []
     for module in lin_layers:
         weight = module.weight.detach()
-        if module.bias is not None:
-            bias = module.bias.detach()
-        else:
-            bias = torch.Tensor([0]).to(weight.device)
+        # if module.bias is not None:
+        #     bias = module.bias.detach()
+        # else:
+        #     bias = torch.Tensor([0]).to(weight.device)
 
         # we are not quantizing bias therefore noo need to include it
         # weight = (
@@ -229,7 +230,11 @@ def get_weights_bit_width_mean(model: torch.nn.Module):
             # weight, module.log_wght_s.detach(), module.qscheme
         # )
         layer_bw = get_layer_wnb_bit_width(
-            weight, module.log_wght_s.detach(), bias, module.log_b_s.detach(), module.qscheme
+            weight, 
+            module.log_wght_s.detach(), 
+            # bias, 
+            # module.log_b_s.detach(), 
+            module.qscheme
         )
 
         if not torch.isnan(layer_bw):
