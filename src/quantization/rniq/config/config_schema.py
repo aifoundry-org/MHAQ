@@ -6,5 +6,5 @@ class RNIQQuantizerParams(BaseModel):
     distillation: Optional[bool] = False    
     distillation_loss: Optional[str] = "Cross-Entropy"
     distillation_teacher: Optional[str] = None
-    qnmethod: Optional[str] = "AEWGS"
+    qnmethod: str = "STE"
 

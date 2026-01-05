@@ -58,3 +58,4 @@ quantization:
   params:
     distillation: True
     distillation_loss: Symmetrical KL
+    qnmethod: STE # AEWGS, EWGS

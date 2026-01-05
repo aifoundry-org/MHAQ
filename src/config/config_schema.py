@@ -6,8 +6,8 @@ import src.quantization as compose_quantization
 from src.aux.types import QScheme, QMethod
 from src.quantization.rniq.config.config_schema import RNIQQuantizerParams
 
-from pydantic import BaseModel, field_validator
-from typing import Literal, Dict, Optional, List
+from pydantic import BaseModel, field_validator, model_validator
+from typing import Any, Literal, Dict, Optional, List
 
 
 class ModelConfig(BaseModel):
@@ -51,7 +51,20 @@ class QuantizationConfig(BaseModel):
     fuse_batchnorm: Optional[bool] = True
     quantize_bias: Optional[bool] = True
     activation_zero_point: Optional[float] = 0.0
-    params: Optional[None | RNIQQuantizerParams] = None
+    params: Optional[RNIQQuantizerParams | Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def validate_params(self):
+        if self.name == "RNIQQuant":
+            if self.params is None:
+                self.params = RNIQQuantizerParams()
+            elif isinstance(self.params, dict):
+                self.params = RNIQQuantizerParams.model_validate(self.params)
+            elif not isinstance(self.params, RNIQQuantizerParams):
+                raise TypeError(
+                    "Params for RNIQQuant must be a mapping or RNIQQuantizerParams."
+                )
+        return self
 
 
 class DataConfig(BaseModel):

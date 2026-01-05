@@ -523,6 +523,7 @@ class RNIQQuant(BaseQuant):
             qscheme=self.qscheme,
             log_s_init=-12,
             quant_bias=self.quant_bias,
+            qnmethod=self.qnmethod
         )
 
     def _quantize_module_linear(self, module: nn.Linear):
@@ -532,4 +533,5 @@ class RNIQQuant(BaseQuant):
             is_biased(module),
             qscheme=self.qscheme,
             log_s_init=-12,
+            qnmethod=self.qnmethod
         )
