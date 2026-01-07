@@ -9,6 +9,7 @@ from lightning.pytorch.loggers import Logger
 from lightning.pytorch.plugins import _PLUGIN_INPUT, Precision
 from lightning.pytorch.profilers import Profiler
 from lightning.pytorch.strategies import Strategy
+from lightning.pytorch.strategies import DDPStrategy
 from lightning.pytorch.trainer.connectors.accelerator_connector import _LITERAL_WARN
 from src.loggers import WandbLogger, TensorBoardLogger
 from src.quantization.rniq.calib.minmaxobserver import (
@@ -85,6 +86,7 @@ class Trainer(pl.Trainer):
         reload_dataloaders_every_n_epochs: int = 0,
         default_root_dir: str | Path | None = None
     ) -> None:
+        strategy = DDPStrategy(find_unused_parameters=True)
         if config:
             self.config = config
             tconfig = config.training
