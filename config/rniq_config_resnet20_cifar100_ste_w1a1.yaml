@@ -6,6 +6,7 @@ model:
     num_classes: 100
 
 training:
+  devices: 1
   criterion: CrossEntropyLoss
   optimizer: RAdam
   learning_rate: 0.002
@@ -23,7 +24,8 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+        auto_insert_metric_name: False
+        filename: rniq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
     TemperatureScale:
       params:
         scale_lr: 1
@@ -44,8 +46,8 @@ data:
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 1
+  weight_bit: 1
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False

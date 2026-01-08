@@ -82,11 +82,13 @@ class Trainer(pl.Trainer):
         detect_anomaly: bool = False,
         barebones: bool = False,
         plugins: Optional[Union[_PLUGIN_INPUT, List[_PLUGIN_INPUT]]] = None,
-        sync_batchnorm: bool = False,
+        sync_batchnorm: bool = True,
         reload_dataloaders_every_n_epochs: int = 0,
         default_root_dir: str | Path | None = None
     ) -> None:
-        strategy = DDPStrategy(find_unused_parameters=True)
+        if not devices == 1:
+            strategy = DDPStrategy(find_unused_parameters=True, )
+
         if config:
             self.config = config
             tconfig = config.training
