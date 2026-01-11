@@ -4,13 +4,14 @@ from typing import Dict, Iterable, List, Literal, Optional, Union
 from lightning import Callback
 import lightning.pytorch as pl
 import logging
+import torch
 from lightning.pytorch.accelerators import Accelerator
 from lightning.pytorch.loggers import Logger
 from lightning.pytorch.plugins import _PLUGIN_INPUT, Precision
 from lightning.pytorch.profilers import Profiler
-from lightning.pytorch.strategies import Strategy
-from lightning.pytorch.strategies import DDPStrategy
+from lightning.pytorch.strategies import Strategy, DDPStrategy, SingleDeviceStrategy
 from lightning.pytorch.trainer.connectors.accelerator_connector import _LITERAL_WARN
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS
 from src.loggers import WandbLogger, TensorBoardLogger
 from src.quantization.rniq.calib.minmaxobserver import (
     MinMaxObserver,
@@ -23,6 +24,7 @@ from src import callbacks as compose_callbacks
 from src import loggers as compose_loggers
 
 log = logging.getLogger("lightning.pytorch")
+
 
 class Trainer(pl.Trainer):
     def __init__(
@@ -86,8 +88,12 @@ class Trainer(pl.Trainer):
         reload_dataloaders_every_n_epochs: int = 0,
         default_root_dir: str | Path | None = None
     ) -> None:
-        if not devices == 1:
-            strategy = DDPStrategy(find_unused_parameters=True, )
+        if torch.cuda.device_count() > 1:
+            strategy = DDPStrategy(
+                find_unused_parameters=True,
+            )
+        else:
+            strategy = "auto"
 
         if config:
             self.config = config
@@ -167,7 +173,10 @@ class Trainer(pl.Trainer):
         verbose=True,
         datamodule=None,
     ):
-        if 'calibration' in self.config.quantization.__dict__ and self.config.quantization.calibration:
+        if (
+            "calibration" in self.config.quantization.__dict__
+            and self.config.quantization.calibration
+        ):
 
             log.info("\nPerforming calibration...")
             c_config = self.config.quantization.calibration
@@ -176,18 +185,35 @@ class Trainer(pl.Trainer):
                 apply_quantile_weights_s(model.model, wbits=c_config.weight_bit)
             else:
                 log.info("Skipping weights calibration...")
-                
+
             if c_config.act_bit != 0:
                 observer_hook = MinMaxObserver()
-                handlers = register_lightning_activation_forward_hook(model.model, observer_hook)
+                handlers = register_lightning_activation_forward_hook(
+                    model.model, observer_hook
+                )
                 self.validate(model, dataloaders, ckpt_path, False, datamodule)
 
                 for handler in handlers:
                     handler.remove()
-                
+
                 apply_mean_stats_activations(model.model, abits=c_config.act_bit)
             else:
                 log.info("Skipping activations scales calibration...")
 
             log.info("\nChecking quality of calibration...")
             self.validate(model, dataloaders, ckpt_path, verbose, datamodule)
+
+    def test(
+        self,
+        model: pl.LightningModule | None = None,
+        dataloaders: pl.LightningDataModule | None = None,
+        ckpt_path: _LITERAL_WARN | Path | None = None,
+        verbose: bool = True,
+        datamodule: pl.LightningDataModule | None = None,
+        weights_only: bool | None = None,
+    ):
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()  # shutdown DDP to allow single-GPU testing
+        return super().test(
+            model, dataloaders, ckpt_path, verbose, datamodule, weights_only
+        )
