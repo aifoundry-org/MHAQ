@@ -122,6 +122,8 @@ class Trainer(pl.Trainer):
 
             check_val_every_n_epoch = tconfig.val_every_n_epochs
             val_check_interval = tconfig.val_check_interval
+            # precision = "bf16-mixed"
+            precision = "32"
 
         super().__init__(
             accelerator=accelerator,
