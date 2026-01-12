@@ -33,32 +33,6 @@ def parse_args():
     return parser.parse_args()
 
 
-# def find_latest_checkpoint(trainer):
-#     """Return the most recently modified checkpoint file from the first
-#     ModelCheckpoint callback's directory, or None if none found."""
-#     ckpt_dir = None
-#     for cb in trainer.callbacks:
-#         if isinstance(cb, ModelCheckpoint):
-#             ckpt_dir = getattr(cb, "dirpath", None) or getattr(cb, "save_dir", None)
-#             if ckpt_dir:
-#                 break
-
-#     if not ckpt_dir or not os.path.isdir(ckpt_dir):
-#         return None
-
-#     candidates = [
-#         os.path.join(ckpt_dir, f)
-#         for f in os.listdir(ckpt_dir)
-#         if f.endswith((".ckpt", ".pt", ".pth", ".th"))
-#     ]
-
-#     if not candidates:
-#         return None
-
-#     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-#     return candidates[0]
-
-
 def main():
     args = parse_args()
 
@@ -86,8 +60,8 @@ def main():
     # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
-    # best_ckpt_path = find_latest_checkpoint(trainer)
-    # print(f"Using latest checkpoint from dir: {best_ckpt_path}")
+    idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
+    val_trainer.callbacks[idx] = trainer.callbacks[idx]
     val_trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":

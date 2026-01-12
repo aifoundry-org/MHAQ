@@ -10,7 +10,7 @@ class CustomModelCheckpoint(ModelCheckpoint):
         filename: str | None = None,
         monitor: str | None = None,
         verbose: bool = True,
-        save_last: bool | None | Literal["link"] = None,
+        save_last: bool | None | Literal["link"] = True,
         save_top_k: int = 4,
         save_on_exception: bool = False,
         save_weights_only: bool = False,
