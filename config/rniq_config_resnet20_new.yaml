@@ -30,7 +30,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/top-1:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1

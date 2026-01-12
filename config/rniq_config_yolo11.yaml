@@ -23,7 +23,7 @@ training:
       params:
         monitor: mAP
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{mAP:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{mAP:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1

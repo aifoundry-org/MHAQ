@@ -9,6 +9,7 @@ model:
 training:
   criterion: CrossEntropyLoss
   optimizer: RAdam
+  precision: bf16-mixed
   learning_rate: 0.002
   max_epochs: 1000
   val_every_n_epochs: 2
@@ -31,7 +32,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
