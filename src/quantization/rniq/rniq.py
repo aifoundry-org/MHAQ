@@ -1,3 +1,4 @@
+from matplotlib import scale
 import torch
 
 from torch import Tensor
@@ -49,11 +50,9 @@ class QNSTE(QNoise):
             grad_input = grad_output * 0
 
         if ctx.needs_input_grad[1]:
-            grad_scale = grad_output * (
-                torch.randint(
-                    2, size=input.shape, dtype=input.dtype, device=input.device
-                ).sub(0.5)
-            )
+            # correct scaling accoring to https://arxiv.org/abs/2508.14004
+            r = torch.randint_like(input, 2).sub_(0.5)
+            grad_scale = (3.0**-0.5) * grad_output * r
 
         return grad_input, grad_scale
 
@@ -74,15 +73,9 @@ class QNEWGS(QNoise):
             grad_input = -torch.abs(grad_output) * e * delta
 
         if ctx.need_input_grad[1]:
-            grad_scale = (
-                (3.0**-0.5)
-                * grad_output
-                * (
-                    torch.randint(
-                        2, size=input.shape, dtype=input.dtype, device=input.device
-                    ).sub(0.5)
-                )
-            )
+            # correct scaling accoring to https://arxiv.org/abs/2508.14004
+            r = torch.randint_like(input, 2).sub_(0.5)
+            grad_scale = (3.0**-0.5) * grad_output * r
 
         return grad_input, grad_scale
 
@@ -96,35 +89,33 @@ class QNAEWGS(QNoise):
 
         if ctx.needs_input_grad[0]:
             e = torch.round(input) - input
-
             num_full = grad_output.sign() * e
-            den_full = e.square()
+            e2_full = e.square()
 
             num = reduce_to_shape(num_full, scale).detach()
-            den = reduce_to_shape(den_full, scale).detach()
+            e2 = reduce_to_shape(e2_full, scale).detach()
+            me = reduce_to_shape(e, scale).detach()
 
             if dist.is_available() and dist.is_initialized():
                 dist.all_reduce(num, op=dist.ReduceOp.AVG)
-                dist.all_reduce(den, op=dist.ReduceOp.AVG)
+                dist.all_reduce(e2, op=dist.ReduceOp.AVG)
+                dist.all_reduce(me, op=dist.ReduceOp.AVG)
 
-            delta = num / (den + 1e-6)
-
+            eps = 1e-3
+            den = (e2 - me.square()).clamp_min(eps)
+            #den0 = 1.0 / 12.0
+            delta = num / den
+            
+            gap = 0.01
+            m = 1.0
             # prevent gradient vanish
-            g_scale = (delta * num_full).clamp_max(0.99)
-
+            g_scale = (m * delta * num_full).clamp_max(1-gap) 
+            
             grad_input = -grad_output * g_scale
-
         if ctx.needs_input_grad[1]:
             # correct scaling accoring to https://arxiv.org/abs/2508.14004
-            grad_scale = (
-                (3.0**-0.5)
-                * grad_output
-                * (
-                    torch.randint(
-                        2, size=input.shape, dtype=input.dtype, device=input.device
-                    ).sub(0.5)
-                )
-            )
+            r = torch.randint_like(input, 2).sub_(0.5)
+            grad_scale = (3.0**-0.5) * grad_output * r
 
         return grad_input, grad_scale
 
