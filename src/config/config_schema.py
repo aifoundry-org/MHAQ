@@ -44,12 +44,12 @@ class QuantizationConfig(BaseModel):
     act_bit: int
     weight_bit: int
     qmethod: QMethod = QMethod.RNIQ
-    qscheme: Optional[QScheme] = QScheme.PER_TENSOR
+    qscheme: Optional[QScheme] = QScheme.PER_CHANNEL
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
-    fuse_batchnorm: Optional[bool] = True
-    quantize_bias: Optional[bool] = True
+    fuse_batchnorm: Optional[bool] = False
+    quantize_bias: Optional[bool] = False
     activation_zero_point: Optional[float] = 0.0
     params: Optional[RNIQQuantizerParams | Dict[str, Any]] = None
 
