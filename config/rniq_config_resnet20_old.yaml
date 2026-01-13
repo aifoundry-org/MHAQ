@@ -9,7 +9,6 @@ model:
 training:
   criterion: CrossEntropyLoss
   optimizer: RAdam
-  precision: bf16-mixed
   learning_rate: 0.002
   max_epochs: 1000
   val_every_n_epochs: 2

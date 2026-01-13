@@ -4,9 +4,7 @@ import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
-import logging
 import argparse
-from lightning.pytorch.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -14,11 +12,10 @@ from src.config.config_loader import load_and_validate_config
 from src.data.compose.composer import DatasetComposer
 from src.models.compose.composer import ModelComposer
 from src.quantization.quantizer import Quantizer
-from src.training.trainer import Trainer
+from src.training.trainer import Trainer, Validator
+from src.loggers.default_logger import logger
 
 torch.set_float32_matmul_precision('high')
-
-logger = logging.getLogger("lightning.pytorch")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run RNIQ quantization.")
@@ -40,29 +37,29 @@ def main():
     dataset_composer = DatasetComposer(config=config)
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
+    validator = Validator(config=config)
     trainer = Trainer(config=config)
-    val_trainer = Trainer(config=config, devices=1)
 
     data = dataset_composer.compose()
     model = model_composer.compose()
 
     logger.info(f"Validate Model before quantization:\n{model}")
-    val_trainer.validate(model, datamodule=data)
+    validator.validate(model, datamodule=data)
 
     qmodel = quantizer.quantize(model, in_place=True)
 
     logger.info("Validate model after layers replacement")
-    val_trainer.validate(qmodel, datamodule=data)
+    validator.validate(qmodel, datamodule=data)
   
     logger.info("Calibrating model initial weights and scales")
-    val_trainer.calibrate(qmodel, datamodule=data)
+    validator.calibrate(qmodel, datamodule=data)
 
     # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
     idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
-    val_trainer.callbacks[idx] = trainer.callbacks[idx]
-    val_trainer.test(qmodel, datamodule=data, ckpt_path="best")
+    validator.callbacks[idx] = trainer.callbacks[idx]
+    validator.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()
