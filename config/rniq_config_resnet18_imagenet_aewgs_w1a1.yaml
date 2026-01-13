@@ -9,7 +9,7 @@ model:
 training:
   criterion: CrossEntropyLoss
   optimizer: RAdam
-  learning_rate: 0.0005
+  learning_rate: 0.0003
   max_epochs: 40
   val_check_interval: 0.25
   log_every_n_steps: 100
@@ -17,38 +17,44 @@ training:
     WandbLogger:
       params:
         name: resnet18-rniq
-        note: "distilled 71.93"
+        note: "distilled 71.93 AEWGS"
  
   callbacks:
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+        auto_insert_metric_name: False
+        filename: rniq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
     TemperatureScale:
       params:
         scale_lr: 1
-        scale_anneal: 0.999
-        warmup: 1000
+        scale_anneal: 0.9995
+        warmup: 100
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 5
-        min_delta: 0.001
+        patience: 10
+        min_delta: 0.0001    
+
 
 data:
   dataset_name: IMAGENET
-  data_dir: ./data/imagenet
-  batch_size: 1000
+  data_dir: ./data/imagenet/
+  batch_size: 250
   num_workers: 8
 
 
 quantization:
   name: RNIQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 1
+  weight_bit: 1
+  freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
+  activation_zero_point: 0.0
   excluded_layers:
     - 'conv1'
     - 'fc'
@@ -58,4 +64,4 @@ quantization:
   params:
     distillation: True
     distillation_loss: Symmetrical KL
-    qnmethod: STE # AEWGS, EWGS
+    qnmethod: AEWGS # AEWGS, EWGS

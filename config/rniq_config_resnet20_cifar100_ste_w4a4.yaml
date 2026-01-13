@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet20_cifar100-rniq
-        note: "Sym KL loss"
+        note: "Sym KL loss STE"
  
   callbacks:
     ModelCheckpoint:

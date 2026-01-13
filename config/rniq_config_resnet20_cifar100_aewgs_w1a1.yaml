@@ -16,7 +16,7 @@ training:
     WandbLogger:
       params:
         name: resnet20_cifar100-rniq
-        note: "Sym KL loss STE"
+        note: "Sym KL loss AEWGS"
  
   callbacks:
     ModelCheckpoint:
@@ -60,4 +60,4 @@ quantization:
   params:
     distillation: True
     distillation_loss: Symmetrical KL
-    qnmethod: STE # AEWGS, EWGS
+    qnmethod: AEWGS # AEWGS, EWGS
