@@ -6,6 +6,8 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
 import torch.distributed
 import argparse
+import tempfile
+from pathlib import Path
 from lightning.pytorch.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -31,30 +33,34 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_latest_checkpoint(trainer):
-    """Return the most recently modified checkpoint file from the first
-    ModelCheckpoint callback's directory, or None if none found."""
-    ckpt_dir = None
-    for cb in trainer.callbacks:
+def get_best_ckpt_path(trainer):
+    """Return best_model_path from any ModelCheckpoint callback, or None."""
+    for cb in list(getattr(trainer, "callbacks", [])) + list(getattr(trainer, "checkpoint_callbacks", [])):
         if isinstance(cb, ModelCheckpoint):
-            ckpt_dir = getattr(cb, "dirpath", None) or getattr(cb, "save_dir", None)
-            if ckpt_dir:
-                break
+            bp = getattr(cb, "best_model_path", None)
+            if bp:
+                return bp
+    return None
 
-    if not ckpt_dir or not os.path.isdir(ckpt_dir):
-        return None
 
-    candidates = [
-        os.path.join(ckpt_dir, f)
-        for f in os.listdir(ckpt_dir)
-        if f.endswith((".ckpt", ".pt", ".pth", ".th"))
-    ]
+# inline simple checkpoint save/wait in main for brevity
+def sync_pre_checkpoint(path):
+    """Ensure all ranks see the pre-fit checkpoint: barrier when DDP, otherwise poll."""
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        torch.distributed.barrier()
+        return
+    import time
+    p = Path(path)
+    while not p.exists():
+        time.sleep(1)
 
-    if not candidates:
-        return None
 
-    candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-    return candidates[0]
+def load_pre_checkpoint(path, qmodel):
+    """Load checkpoint into qmodel if path exists."""
+    p = Path(path)
+    if p.exists():
+        ckpt = torch.load(str(p), map_location="cpu")
+        qmodel.load_state_dict(ckpt.get("state_dict", {}), strict=False)
 
 
 def main():
@@ -64,35 +70,53 @@ def main():
     dataset_composer = DatasetComposer(config=config)
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
-    trainer = Trainer(config=config)
     val_trainer = Trainer(config=config, devices=1)
+    trainer = Trainer(config=config)
 
     data = dataset_composer.compose()
     model = model_composer.compose()
+    
+    # path where pre-fit checkpoint will be saved/loaded (use a temporary shared file and remove after run)
+    pre_ckpt_path = Path(tempfile.gettempdir()) / "prequant_latest.ckpt"
 
-    print("Validate  model before quantization")
-    val_trainer.validate(model, datamodule=data)
+    global_zero = trainer.is_global_zero
+    print("global_zero:", global_zero)
 
+    # Run heavy pre-fit ops only on rank 0
+    if global_zero:
+        print("Validate model before quantization")
+        val_trainer.validate(model, datamodule=data)
+    
     qmodel = quantizer.quantize(model, in_place=True)
+    
+    if global_zero:
+        print("Validate model after layers replacement")
+        val_trainer.validate(qmodel, datamodule=data)
+        print("Calibrating model initial weights and scales")
+        val_trainer.calibrate(qmodel, datamodule=data)
 
-    print("Validate model after layers replacement")
-    val_trainer.validate(qmodel, datamodule=data)
-  
-    print("Calibrating model initial weights and scales")
-    val_trainer.calibrate(qmodel, datamodule=data)
+        # Save to a temporary shared file (system temp dir). We'll remove it after run.
+        torch.save({"state_dict": qmodel.state_dict()}, str(pre_ckpt_path))
+        # let other ranks proceed
+        sync_pre_checkpoint(pre_ckpt_path)
 
-    # Finetune model
+    # On non-zero ranks, wait and load checkpoint now 
+    sync_pre_checkpoint(pre_ckpt_path)
+    load_pre_checkpoint(pre_ckpt_path, qmodel)
+
+    print("Starting quantization-aware training")
     trainer.fit(qmodel, datamodule=data)
 
-    # Only rank 0 performs testing and saving
+    # Shutdown DDP for single-rank testing and only run test on rank 0
     if torch.distributed.is_available() and torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group() # shutdown DDP to allow single-GPU testing
-        if trainer.global_rank != 0:
-            return
+        torch.distributed.destroy_process_group()
 
-    best_ckpt_path = find_latest_checkpoint(trainer)
-    print(f"Using latest checkpoint from dir: {best_ckpt_path}")
-    val_trainer.test(qmodel, datamodule=data, ckpt_path=best_ckpt_path)
+    if global_zero:
+        best_ckpt_path = get_best_ckpt_path(trainer)
+        print(f"Using latest checkpoint from dir: {best_ckpt_path}")
+        val_trainer.test(qmodel, datamodule=data, ckpt_path=best_ckpt_path)
+        # Remove temporary prequant checkpoint file
+        pre_ckpt_path.unlink(missing_ok=True)
 
 if __name__ == "__main__":
     main()

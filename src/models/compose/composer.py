@@ -48,7 +48,7 @@ class ModelComposer():
                         model_config.cpt_url)
                 state_dict = state_dict.get('model', state_dict)
                 try:
-                    self.model.load_state_dict(state_dict.state_dict())
+                    self.model.load_state_dict(state_dict)
                 except:
                     wrapper = nn.Sequential(
                         OrderedDict([('module', self.model)]))
