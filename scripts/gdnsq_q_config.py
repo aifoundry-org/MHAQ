@@ -6,7 +6,6 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
 import logging
 import argparse
-from lightning.pytorch.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -29,7 +28,7 @@ def parse_args():
         help="Path to the configuration file (YAML).",
         # default="config/gdnsq_config_yolo11.yaml"
         # default="config/gdnsq_config_resnet20_old.yaml"
-        default="config/rniq_config_rfdn.yaml"
+        default="config/gdnsq_config_rfdn.yaml"
     )
     return parser.parse_args()
 
