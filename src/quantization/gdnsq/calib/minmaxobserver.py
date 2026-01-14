@@ -3,7 +3,7 @@ import torch
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
-from src.loggers.default_logger import pl_logger
+from src.loggers.default_logger import logger
 from src.aux.traverse import previous_leaf
 import numpy as np
 
@@ -43,7 +43,7 @@ def apply_mean_stats_activations(module, abits=8, max_bits = 24):
             min = m.min_values.min()
             max = m.max_values.max()
 
-            pl_logger.info(f"Min: {min}, Max: {max}, prev_leaf: {previous_leaf(module, name)}")
+            logger.info(f"Min: {min}, Max: {max}, prev_leaf: {previous_leaf(module, name)}")
 
             m.min_values = torch.Tensor([])
             m.max_values = torch.Tensor([])
@@ -89,4 +89,4 @@ def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channe
             #m.log_wght_s = torch.nn.Parameter(torch.full(m.log_wght_s.shape, log_s), requires_grad=m.log_wght_s.requires_grad) # per-tensor
             m.log_wght_s = torch.nn.Parameter(log_s, requires_grad=m.log_wght_s.requires_grad)
 
-            pl_logger.debug(f"{name}_q = {m.log_wght_s} ")
+            logger.debug(f"{name}_q = {m.log_wght_s} ")
