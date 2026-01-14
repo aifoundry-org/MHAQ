@@ -4,7 +4,9 @@ import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
+import logging
 import argparse
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
@@ -15,6 +17,8 @@ from src.quantization.quantizer import Quantizer
 from src.training.trainer import Trainer
 
 torch.set_float32_matmul_precision('high')
+
+logger = logging.getLogger("lightning.pytorch")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
@@ -38,26 +42,28 @@ def main():
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
     trainer = Trainer(config=config)
+    val_trainer = Trainer(config=config, devices=1)
 
     data = dataset_composer.compose()
     model = model_composer.compose()
 
-    # Validate  model before quantization
-    trainer.validate(model, datamodule=data)
+    logger.info(f"Validate Model before quantization:\n{model}")
+    val_trainer.validate(model, datamodule=data)
 
     qmodel = quantizer.quantize(model, in_place=True)
 
-    # Validate model after layers replacement
-    # trainer.validate(qmodel, datamodule=data)
+    logger.info("Validate model after layers replacement")
+    val_trainer.validate(qmodel, datamodule=data)
   
-    # Calibrating model initial weights and scales if defined in config
-    trainer.calibrate(qmodel, datamodule=data)
+    logger.info("Calibrating model initial weights and scales")
+    val_trainer.calibrate(qmodel, datamodule=data)
 
     # # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
-    # # Test model after quantization
-    trainer.test(qmodel, datamodule=data, ckpt_path="best")
+    idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
+    val_trainer.callbacks[idx] = trainer.callbacks[idx]
+    val_trainer.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()

@@ -23,7 +23,7 @@ training:
       params:
         monitor: mAP
         mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{mAP:.2f}"
+        filename: gdnsq_checkpoint-{epoch:02d}-"{mAP:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -59,3 +59,4 @@ quantization:
   params:
     distillation: False
     distillation_loss: Symmetrical KL
+    qnmethod: STE # AEWGS, EWGS

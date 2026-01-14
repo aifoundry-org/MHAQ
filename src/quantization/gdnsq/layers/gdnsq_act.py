@@ -15,7 +15,7 @@ class NoisyAct(nn.Module):
         noise_ratio=1,
         disable=False,
         init_zero_point=0.0,
-        qnmethod: QNMethod = QNMethod.AEWGS,
+        qnmethod: QNMethod = QNMethod.STE,
     ) -> None:
         super().__init__()
         self.disable = disable
