@@ -21,7 +21,7 @@ class NoisyLinear(nn.Linear):
         qscheme: QScheme = QScheme.PER_TENSOR,
         log_s_init: float = -12,
         rand_noise: bool = False,
-        qnmethod: QNMethod = QNMethod.AEWGS,
+        qnmethod: QNMethod = QNMethod.STE,
     ) -> None:
         super().__init__(in_features, out_features, bias, device, dtype)
         self.qscheme = qscheme

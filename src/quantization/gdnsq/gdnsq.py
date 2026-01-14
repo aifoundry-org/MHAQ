@@ -147,7 +147,7 @@ class Quantizer:
         min_val: torch.Tensor,
         max_val: torch.Tensor,
         rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,]),
-        qnmethod: QNMethod=QNMethod.AEWGS
+        qnmethod: QNMethod=QNMethod.STE
     ) -> None:
         """
         Main quantizer for gdnsq method.

@@ -1,60 +1,62 @@
 model:
   type: VISION_CLS
-  name: resnet18
-  cpt_url: "file://data/models/ilsvrc2012-resnet18_from_resnet34.pt"
+  name: resnet20_cifar100
   params:
-    pretrained: False
-    num_classes: 1000
+    pretrained: True
+    num_classes: 100
 
 training:
+  devices: 1
   criterion: CrossEntropyLoss
   optimizer: RAdam
-  learning_rate: 0.0005
-  max_epochs: 40
-  val_check_interval: 0.25
-  log_every_n_steps: 100
+  learning_rate: 0.002
+  max_epochs: 1500
+  val_every_n_epochs: 2
+  log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
-        name: resnet18-gdnsq
-        note: "distilled 71.93"
+        name: resnet20_cifar100-gdnsq
+        note: "Sym KL loss"
  
   callbacks:
     ModelCheckpoint:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
-        scale_anneal: 0.999
         warmup: 1000
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 5
-        min_delta: 0.001
+        patience: 50
+        min_delta: 0.0001
 
 data:
-  dataset_name: IMAGENET
-  data_dir: ./data/imagenet
+  dataset_name: CIFAR100
   batch_size: 1000
-  num_workers: 8
+  num_workers: 10
 
 
 quantization:
   name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 1
+  weight_bit: 1
+  freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
   excluded_layers:
-    - 'conv1'
-    - 'fc'
+    - 'features.init_block.conv'
+    - 'output'
   calibration:
     act_bit: 10
     weight_bit: 10
   params:
     distillation: True
     distillation_loss: Symmetrical KL
+    qnmethod: STE # AEWGS, EWGS

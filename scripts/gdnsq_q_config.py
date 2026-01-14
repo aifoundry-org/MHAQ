@@ -12,7 +12,8 @@ from src.config.config_loader import load_and_validate_config
 from src.data.compose.composer import DatasetComposer
 from src.models.compose.composer import ModelComposer
 from src.quantization.quantizer import Quantizer
-from src.training.trainer import Trainer
+from src.training.trainer import Trainer, Validator
+from src.loggers.default_logger import logger
 
 torch.set_float32_matmul_precision('high')
 
@@ -25,7 +26,7 @@ def parse_args():
         help="Path to the configuration file (YAML).",
         # default="config/gdnsq_config_yolo11.yaml"
         # default="config/gdnsq_config_resnet20_old.yaml"
-        default="config/rniq_config_rfdn.yaml"
+        default="config/gdnsq_config_rfdn.yaml"
     )
     return parser.parse_args()
 
@@ -37,27 +38,29 @@ def main():
     dataset_composer = DatasetComposer(config=config)
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
+    validator = Validator(config=config)
     trainer = Trainer(config=config)
 
     data = dataset_composer.compose()
     model = model_composer.compose()
 
-    # Validate  model before quantization
-    trainer.validate(model, datamodule=data)
+    logger.info(f"Validate Model before quantization:\n{model}")
+    validator.validate(model, datamodule=data)
 
     qmodel = quantizer.quantize(model, in_place=True)
 
-    # Validate model after layers replacement
-    # trainer.validate(qmodel, datamodule=data)
+    logger.info("Validate model after layers replacement")
+    validator.validate(qmodel, datamodule=data)
   
-    # Calibrating model initial weights and scales if defined in config
-    trainer.calibrate(qmodel, datamodule=data)
+    logger.info("Calibrating model initial weights and scales")
+    validator.calibrate(qmodel, datamodule=data)
 
     # # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
-    # # Test model after quantization
-    trainer.test(qmodel, datamodule=data, ckpt_path="best")
+    idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
+    validator.callbacks[idx] = trainer.callbacks[idx]
+    validator.test(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()

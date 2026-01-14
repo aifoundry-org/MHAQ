@@ -1,65 +1,63 @@
 model:
   type: VISION_CLS
-  name: resnet20_cifar10
-  cpt_url: 'file://data/models/cifar10-resnet20_cifar10_from_resnet20_cifar10_new-final_run_92.81.th'
+  name: resnet20_cifar100
   params:
-    pretrained: False
-    num_classes: 10
+    pretrained: True
+    num_classes: 100
 
 training:
+  devices: 1
   criterion: CrossEntropyLoss
   optimizer: RAdam
   learning_rate: 0.002
-  max_epochs: 1000
+  max_epochs: 1500
   val_every_n_epochs: 2
   log_every_n_steps: 10
   loggers:
     WandbLogger:
       params:
-        name: resnet20-gdnsq
-        note: "distilled 92.84 NO_BN, bias quant"
+        name: resnet20_cifar100-gdnsq
+        note: "Sym KL loss"
+ 
   callbacks:
-    LayersWidthVis:
-      params: {}
+    ModelCheckpoint:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        auto_insert_metric_name: False
+        filename: gdnsq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
+    TemperatureScale:
+      params:
+        scale_lr: 1
+        warmup: 1000
     NoiseEarlyStopping:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
         patience: 50
         min_delta: 0.0001
-    ModelCheckpoint:
-      params:
-        monitor: Metric/ns_Accuracy_top1
-        mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
-    TemperatureScale:
-      params:
-        scale_lr: 1
-        warmup: 1000
+
 data:
-  dataset_name: CIFAR10
+  dataset_name: CIFAR100
   batch_size: 1000
-  num_workers: 8
+  num_workers: 10
 
 
 quantization:
   name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 1
-  act_bit: 1
+  act_bit: 4
+  weight_bit: 4
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False
-  activation_zero_point: 0.0
   excluded_layers:
-    - 'linear'
-    - 'conv1'
-#     - 'module.linear'
-#     - 'module.conv1'
+    - 'features.init_block.conv'
+    - 'output'
   calibration:
     act_bit: 10
     weight_bit: 10
   params:
     distillation: True
     distillation_loss: Symmetrical KL
-    
+    qnmethod: STE # AEWGS, EWGS

@@ -312,8 +312,8 @@ class GDNSQQuant(BaseQuant):
         fp_outputs = self.tmodel(inputs)
         loss = self.wrapped_criterion(outputs, fp_outputs)
 
-        self.log("Loss/FP loss", F.cross_entropy(fp_outputs, targets))
-        self.log("Loss/Train loss", loss, prog_bar=True)
+        self.log("Loss/FP loss", F.cross_entropy(fp_outputs, targets), sync_dist=True)
+        self.log("Loss/Train loss", loss, prog_bar=True, sync_dist=True)
         self.log(
             "Loss/Base train loss",
             self.wrapped_criterion.base_loss,
@@ -330,8 +330,9 @@ class GDNSQQuant(BaseQuant):
             "Loss/Weight reg loss",
             self.wrapped_criterion.weight_reg_loss,
             prog_bar=False,
+            sync_dist=True,
         )
-        self.log("LR", self.lr, prog_bar=True)
+        self.log("LR", self.lr, prog_bar=True, sync_dist=True)
 
         return loss
 
@@ -342,7 +343,7 @@ class GDNSQQuant(BaseQuant):
         outputs = GDNSQQuant.noisy_step(self, inputs)
         loss = self.wrapped_criterion(outputs, targets)
 
-        self.log("Loss/Train loss", loss, prog_bar=True)
+        self.log("Loss/Train loss", loss, prog_bar=True, sync_dist=True)
         self.log(
             "Loss/Base train loss",
             self.wrapped_criterion.base_loss,
@@ -361,7 +362,7 @@ class GDNSQQuant(BaseQuant):
             prog_bar=False,
             sync_dist=True,
         )
-        self.log("LR", self.lr, prog_bar=True)
+        self.log("LR", self.lr, prog_bar=True, sync_dist=True)
 
         return loss
 
@@ -387,7 +388,7 @@ class GDNSQQuant(BaseQuant):
             if issubclass(
                 metric.__class__, torchmetrics.detection.MeanAveragePrecision
             ):
-                self.log(f"Metric/mAP@[.5:.95]", metric_value["map"], prog_bar=False)
+                self.log(f"Metric/mAP@[.5:.95]", metric_value["map"], prog_bar=False, sync_dist=True)
                 self.log(
                     f"Metric/ns_mAP@[.5:.95]",
                     metric_value["map"] * model_stats.is_converged(self),
@@ -395,7 +396,7 @@ class GDNSQQuant(BaseQuant):
                     sync_dist=True
                 )
             else:
-                self.log(f"Metric/{name}", metric_value, prog_bar=False)
+                self.log(f"Metric/{name}", metric_value, prog_bar=False, sync_dist=True)
                 self.log(
                     f"Metric/ns_{name}",
                     metric_value * model_stats.is_converged(self),
@@ -452,9 +453,9 @@ class GDNSQQuant(BaseQuant):
         test_loss = self.criterion(outputs[0], targets)
         for name, metric in self.metrics:
             metric_value = metric(outputs[0], targets)
-            self.log(f"{name}", metric_value, prog_bar=False)
+            self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
 
-        self.log("test_loss", test_loss, prog_bar=True)
+        self.log("test_loss", test_loss, prog_bar=True, sync_dist=True)
 
     def _init_config(self):
         if self.config:
@@ -522,6 +523,7 @@ class GDNSQQuant(BaseQuant):
             qscheme=self.qscheme,
             log_s_init=-12,
             quant_bias=self.quant_bias,
+            qnmethod=self.qnmethod
         )
 
     def _quantize_module_linear(self, module: nn.Linear):
@@ -531,4 +533,5 @@ class GDNSQQuant(BaseQuant):
             is_biased(module),
             qscheme=self.qscheme,
             log_s_init=-12,
+            qnmethod=self.qnmethod
         )

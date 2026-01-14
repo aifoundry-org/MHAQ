@@ -30,7 +30,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/top-1:.2f}"
+        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/top-1:.4f}"
     TemperatureScale:
       params:
         scale_lr: 1
@@ -47,6 +47,8 @@ quantization:
   weight_bit: 4
   act_bit: 4
   freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'
@@ -56,4 +58,5 @@ quantization:
   params:
     distillation: True
     distillation_loss: Symmetrical KL
+    qnmethod: STE # AEWGS, EWGS
 
