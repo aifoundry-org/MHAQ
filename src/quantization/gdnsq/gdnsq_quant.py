@@ -247,7 +247,11 @@ class GDNSQQuant(BaseQuant):
                     metric_value = self.trainer.logged_metrics[key]
                 # if metric_value := metric[1]._forward_cache:
                 # if metric_value := :
-                    self.log(f"Metric/ns_{metric}", 
+                    if isinstance(metric, list):
+                        metric_name = metric[0]
+                    else:
+                        metric_name = metric
+                    self.log(f"Metric/ns_{metric_name}", 
                              metric_value * model_stats.is_converged(self), 
                              prog_bar=False,
                              sync_dist=True)
