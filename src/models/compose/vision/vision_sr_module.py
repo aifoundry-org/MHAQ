@@ -2,8 +2,6 @@ from collections import defaultdict
 from typing import Any, Dict, Tuple
 from src.data.compose.vision.sr.transforms.transforms import to_luminance
 
-
-
 import lightning.pytorch as pl
 import torchmetrics
 import piq
@@ -26,7 +24,7 @@ class LVisionSR(pl.LightningModule):
             model_params = {}
         self._data_range = model_params.get("data_range", 1.0)
 
-        self._metrics = {
+        self.metrics = {
             "PSNR": piq.psnr,
             "SSIM": piq.ssim,
         }
@@ -82,7 +80,7 @@ class LVisionSR(pl.LightningModule):
         stage_metrics = self._stage_metrics[stage]
         if dataset_name not in stage_metrics:
             stage_metrics[dataset_name] = {
-                name: metric for name, metric in self._metrics.items()
+                name: metric for name, metric in self.metrics.items()
             }
         return stage_metrics[dataset_name]
 
@@ -109,8 +107,10 @@ class LVisionSR(pl.LightningModule):
                 on_step=False,
                 on_epoch=True,
                 batch_size=batch_size,
-                add_dataloader_idx=False
-            )
+                add_dataloader_idx=False,
+                sync_dist=True
+                )
+            self.trainer.logged_metrics[f"{metric_name}/{dataset_name}"] = metric_value
             if metric_name == "PSNR" and dataset_name and stage in self._stage_psnr_sums:
                 psnr_scalar = metric_value.detach()
                 if psnr_scalar.numel() > 1:
@@ -125,7 +125,8 @@ class LVisionSR(pl.LightningModule):
             on_step=True,
             on_epoch=True,
             batch_size=batch_size,
-            add_dataloader_idx=False
+            add_dataloader_idx=False,
+            sync_dist=True
         )
 
     def training_step(self, batch, batch_idx):
@@ -137,6 +138,7 @@ class LVisionSR(pl.LightningModule):
             on_step=True,
             on_epoch=False,
             batch_size=batch[0].size(0),
+            sync_dist=True
         )
         return loss
 
@@ -219,4 +221,6 @@ class LVisionSR(pl.LightningModule):
                 prog_bar=prog_bar,
                 on_step=False,
                 on_epoch=True,
+                sync_dist=True
             )
+            self.trainer.logged_metrics[log_name] = weighted_psnr

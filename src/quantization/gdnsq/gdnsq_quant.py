@@ -237,10 +237,21 @@ class GDNSQQuant(BaseQuant):
     @staticmethod
     def noisy_val_decorator(val_step):
         self = val_step.__self__
-        self._batch_size = self.trainer.config.data.batch_size
+        # self._batch_size = self.trainer.config.data.batch_size
 
         def wrapper(*args):
             loss = val_step(*args)
+            # for metric in self.trainer.model.metrics:
+            for metric in self.metrics:
+                if key := [key for key in self.trainer.logged_metrics.keys() if  metric[0] in key][0]:
+                    metric_value = self.trainer.logged_metrics[key]
+                # if metric_value := metric[1]._forward_cache:
+                # if metric_value := :
+                    self.log(f"Metric/ns_{metric}", 
+                             metric_value * model_stats.is_converged(self), 
+                             prog_bar=False,
+                             sync_dist=True)
+
 
             self.log("Loss/Validation loss", loss, prog_bar=False, sync_dist=True)
 
@@ -248,42 +259,42 @@ class GDNSQQuant(BaseQuant):
                 "Mean weights bit width",
                 model_stats.get_weights_bit_width_mean(self.model),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
             self.log(
                 "Actual weights bit width",
                 model_stats.get_true_weights_width(self.model, max=False),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
             self.log(
                 "Actual weights max bit width",
                 model_stats.get_true_weights_width(self.model),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
             self.log(
                 "Mean activations bit width",
                 model_stats.get_activations_bit_width_mean(self.model),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
             self.log(
                 "Actual activations bit widths",
                 model_stats.get_true_activations_width(self.model, max=False),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
             self.log(
                 "Actual activations max bit widths",
                 model_stats.get_true_activations_width(self.model),
                 prog_bar=False,
-                batch_size=self._batch_size,
+                # batch_size=self._batch_size,
                 sync_dist=True,
             )
 
