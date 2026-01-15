@@ -13,12 +13,13 @@ from lightning.pytorch.strategies import Strategy, DDPStrategy, SingleDeviceStra
 from lightning.pytorch.trainer.connectors.accelerator_connector import _LITERAL_WARN
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from src.loggers import WandbLogger, TensorBoardLogger
-from src.quantization.rniq.calib.minmaxobserver import (
+from src.training.loops import SrEvalLoop
+from src.quantization.gdnsq.calib.minmaxobserver import (
     MinMaxObserver,
     apply_mean_stats_activations,
     apply_quantile_weights_s,
 )
-from src.quantization.rniq.calib.hooks import register_lightning_activation_forward_hook
+from src.quantization.gdnsq.calib.hooks import register_lightning_activation_forward_hook
 
 from src import callbacks as compose_callbacks
 from src import loggers as compose_loggers
@@ -166,6 +167,22 @@ class Trainer(pl.Trainer):
             reload_dataloaders_every_n_epochs=reload_dataloaders_every_n_epochs,
             default_root_dir=default_root_dir,
         )
+
+        if config:
+            if config.model.type == "VISION_SR":
+                sr_loop = SrEvalLoop(trainer=self.validate_loop.trainer,
+                                     trainer_fn=self.validate_loop._trainer_fn,
+                                     stage=self.validate_loop._stage,
+                                     verbose=self.validate_loop.verbose,
+                                     inference_mode=self.validate_loop.inference_mode)
+                sr_loop_test = SrEvalLoop(trainer=self.test_loop.trainer,
+                                     trainer_fn=self.test_loop._trainer_fn,
+                                     stage=self.test_loop._stage,
+                                     verbose=self.test_loop.verbose,
+                                     inference_mode=self.test_loop.inference_mode)
+
+                self.validate_loop = sr_loop
+                self.test_loop = sr_loop_test
 
     def calibrate(
         self,
