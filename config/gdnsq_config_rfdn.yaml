@@ -32,8 +32,8 @@ training:
         warmup: 500
     NoiseEarlyStopping:
       params:
-        monitor: Loss
-        mode: min
+        monitor: PSNR/Weighted_mean
+        mode: max
         patience: 1000
         min_delta: 0.00005
 
