@@ -144,7 +144,7 @@ class LVisionSR(pl.LightningModule):
 
     def validation_step(self, val_batch, val_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(val_batch)
-        outputs = outputs.clamp(0,1)  # rounding pixel values ..
+        outputs = outputs.clamp(0,1)  # clamping pixel values ..
         # outputs = outputs.mul(255).round().div(255)
         if self.to_luminance:
             outputs = to_luminance(outputs)
@@ -179,7 +179,11 @@ class LVisionSR(pl.LightningModule):
 
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
         inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
-        return self.forward(inputs).clamp(0,1)
+        if self.denormalize:
+            # return self.forward(inputs * 255).div(255).clamp(0,1)
+            return self.forward(inputs * 255).div(255)
+        else:
+            return self.forward(inputs).clamp(0,1)
 
     def on_validation_epoch_start(self) -> None:
         self._reset_stage_psnr_tracking("val")

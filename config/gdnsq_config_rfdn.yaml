@@ -61,4 +61,4 @@ quantization:
     weight_bit: 10
   params:
     distillation: True
-    distillation_loss: L2
+    distillation_loss: L1

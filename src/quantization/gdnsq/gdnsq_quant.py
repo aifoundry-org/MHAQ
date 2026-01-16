@@ -324,7 +324,8 @@ class GDNSQQuant(BaseQuant):
         outputs = GDNSQQuant.noisy_step(self, inputs)
 
         self.tmodel.eval()
-        fp_outputs = self.tmodel(inputs)
+        # fp_outputs = self.tmodel(inputs)
+        fp_outputs = self.tmodel.predict_step(inputs, batch_idx)
         loss = self.wrapped_criterion(outputs, fp_outputs)
 
         self.log("Loss/FP loss", F.cross_entropy(fp_outputs, targets), sync_dist=True)
