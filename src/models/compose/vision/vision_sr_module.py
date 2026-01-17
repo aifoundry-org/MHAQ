@@ -42,7 +42,10 @@ class LVisionSR(pl.LightningModule):
         return self.optimizer(self.parameters(), self.lr)
 
     def forward(self, inputs):
-        return self.model(inputs)
+        if self.denormalize:
+            return self.model(inputs * 255).div(255)
+        else:
+            return self.model(inputs)
 
     def _shared_step(self, batch: Tuple):
         dataset_name = None
@@ -55,10 +58,7 @@ class LVisionSR(pl.LightningModule):
         else:
             inputs = batch
             target = None
-        if self.denormalize:
-            outputs = self.forward(inputs * 255).div(255)
-        else:
-            outputs = self.forward(inputs)
+        outputs = self.forward(inputs)
         loss = self.criterion(outputs, target)
         return outputs, target, loss, dataset_name
 
@@ -144,7 +144,7 @@ class LVisionSR(pl.LightningModule):
 
     def validation_step(self, val_batch, val_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(val_batch)
-        outputs = outputs.clamp(0,1)  # rounding pixel values ..
+        outputs = outputs.clamp(0,1)  # clamping pixel values ..
         # outputs = outputs.mul(255).round().div(255)
         if self.to_luminance:
             outputs = to_luminance(outputs)

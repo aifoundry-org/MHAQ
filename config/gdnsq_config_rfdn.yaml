@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: RFDN
-        note: "signed activations + calibration"
+        note: ""
  
   callbacks:
     NoiseModelCheckpoint:
@@ -32,8 +32,8 @@ training:
         warmup: 500
     NoiseEarlyStopping:
       params:
-        monitor: Loss
-        mode: min
+        monitor: PSNR/Weighted_mean
+        mode: max
         patience: 1000
         min_delta: 0.00005
 
@@ -61,4 +61,4 @@ quantization:
     weight_bit: 10
   params:
     distillation: True
-    distillation_loss: L2
+    distillation_loss: L1

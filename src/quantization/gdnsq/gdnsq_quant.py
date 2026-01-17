@@ -39,7 +39,7 @@ class GDNSQQuant(BaseQuant):
             nn.Linear: NoisyLinear,
         }
 
-    def get_distill_loss(self, qmodel):
+    def get_loss(self, qmodel):
         if self.config.quantization.params.distillation:
             config_loss = self.config.quantization.params.distillation_loss
             if config_loss == "Cross-Entropy":
@@ -90,14 +90,14 @@ class GDNSQQuant(BaseQuant):
         if self.config.quantization.params.distillation:
             qmodel.tmodel = tmodel.requires_grad_(False)
             qmodel.wrapped_criterion = PotentialLoss(
-                criterion=self.get_distill_loss(qmodel=qmodel),
+                criterion=self.get_loss(qmodel=qmodel),
                 p=1,
                 a=self.act_bit,
                 w=self.weight_bit,
             )
         else:
             qmodel.wrapped_criterion = PotentialLossNoPred(
-                criterion=self.get_distill_loss(qmodel=qmodel),
+                criterion=self.get_loss(qmodel=qmodel),
                 p=1,
                 a=self.act_bit,
                 w=self.weight_bit,
@@ -316,7 +316,7 @@ class GDNSQQuant(BaseQuant):
     @staticmethod  # yes, it's a static method with self argument
     def noisy_step(self, x):
         # now that we set qmodule.qscheme, we can address it in replaced step
-        return (self.model(x), *ModelHelper.get_model_values(self.model, self.qscheme))
+        return (self.forward(x), *ModelHelper.get_model_values(self.model, self.qscheme))
 
     @staticmethod
     def distillation_noisy_training_step(self, batch, batch_idx):
@@ -324,17 +324,18 @@ class GDNSQQuant(BaseQuant):
         outputs = GDNSQQuant.noisy_step(self, inputs)
 
         self.tmodel.eval()
-        fp_outputs = self.tmodel(inputs)
+        fp_outputs = self.tmodel.predict_step(inputs, batch_idx)
         loss = self.wrapped_criterion(outputs, fp_outputs)
 
         self.log("Loss/FP loss", F.cross_entropy(fp_outputs, targets), sync_dist=True)
-        self.log("Loss/Train loss", loss, prog_bar=True, sync_dist=True)
         self.log(
             "Loss/Base train loss",
             self.wrapped_criterion.base_loss,
             prog_bar=True,
             sync_dist=True,
         )
+
+        self.log("Loss/Train loss", loss, prog_bar=True, sync_dist=True)
         self.log(
             "Loss/Wloss", self.wrapped_criterion.wloss, prog_bar=False, sync_dist=True
         )
