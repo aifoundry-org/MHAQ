@@ -71,6 +71,7 @@ class LVisionCls(pl.LightningModule):
         for name, metric in self.metrics:
             metric_value = metric(outputs, target)
             self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
+            self.trainer.logged_metrics[f"{name}"] = metric_value
 
         # self.log("val_loss", val_loss, prog_bar=False, sync_dist=True)
         return val_loss
@@ -82,10 +83,11 @@ class LVisionCls(pl.LightningModule):
         for name, metric in self.metrics:
             metric_value = metric(outputs, target)
             self.log(f"{name}", metric_value, prog_bar=False, sync_dist=True)
+            self.trainer.logged_metrics[f"{name}"] = metric_value
 
         self.log("test_loss", val_loss, prog_bar=True, sync_dist=True)
 
 
-    def predict_step(self, pred_batch):
-        inputs, target = pred_batch
+    def predict_step(self, pred_batch, batch_idx=0):
+        inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
         return self.forward(inputs)

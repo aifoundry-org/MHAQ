@@ -1,0 +1,62 @@
+model:
+  type: VISION_CLS
+  name: resnet20_cifar100
+  params:
+    pretrained: True
+    num_classes: 100
+
+training:
+  criterion: CrossEntropyLoss
+  optimizer: RAdam
+  learning_rate: 0.002
+  max_epochs: 1500
+  val_every_n_epochs: 2
+  log_every_n_steps: 10
+  loggers:
+    WandbLogger:
+      params:
+        name: resnet20_cifar100-gdnsq
+        note: "Sym KL loss STE"
+ 
+  callbacks:
+    ModelCheckpoint:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.4f}"
+    TemperatureScale:
+      params:
+        scale_lr: 1
+        warmup: 1000
+    NoiseEarlyStopping:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 100
+        min_delta: 0.0001
+
+data:
+  dataset_name: CIFAR100
+  batch_size: 1000
+  num_workers: 10
+
+
+quantization:
+  name: GDNSQQuant
+  qscheme: 1 # 0 for per-tensor, 1 for per-channel
+  act_bit: 1
+  weight_bit: 1
+  freeze_batchnorm: False
+  fuse_batchnorm: False
+  quantize_bias: False
+  activation_zero_point: 0.0
+  excluded_layers:
+    - 'features.init_block.conv'
+    - 'output'
+  calibration:
+    act_bit: 10
+    weight_bit: 10
+  params:
+    distillation: True
+    distillation_loss: Symmetrical KL
+    qnmethod: STE # AEWGS, EWGS
