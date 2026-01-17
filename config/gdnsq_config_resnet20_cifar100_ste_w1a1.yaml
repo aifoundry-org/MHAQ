@@ -6,7 +6,6 @@ model:
     num_classes: 100
 
 training:
-  devices: 1
   criterion: CrossEntropyLoss
   optimizer: RAdam
   learning_rate: 0.002
@@ -17,7 +16,7 @@ training:
     WandbLogger:
       params:
         name: resnet20_cifar100-gdnsq
-        note: "Sym KL loss"
+        note: "Sym KL loss STE"
  
   callbacks:
     ModelCheckpoint:
@@ -33,7 +32,7 @@ training:
       params:
         monitor: Metric/ns_Accuracy_top1
         mode: max
-        patience: 50
+        patience: 100
         min_delta: 0.0001
 
 data:
@@ -50,6 +49,7 @@ quantization:
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False
+  activation_zero_point: 0.0
   excluded_layers:
     - 'features.init_block.conv'
     - 'output'

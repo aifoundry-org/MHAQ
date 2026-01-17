@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: resnet18-gdnsq
-        note: "distilled 71.93"
+        note: "distilled 71.93 AEWGS"
  
   callbacks:
     ModelCheckpoint:
@@ -25,7 +25,7 @@ training:
         monitor: Metric/ns_Accuracy_top1
         mode: max
         auto_insert_metric_name: False
-        filename: gdnsq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.4f}"
+        filename: gdnsq_checkpoint-{epoch:02d}-{Metric/ns_Accuracy_top1:.4f}
     TemperatureScale:
       params:
         scale_lr: 1
@@ -49,8 +49,8 @@ data:
 quantization:
   name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 1
+  weight_bit: 1
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False
@@ -64,4 +64,4 @@ quantization:
   params:
     distillation: True
     distillation_loss: Symmetrical KL
-    qnmethod: STE # AEWGS, EWGS
+    qnmethod: AEWGS # AEWGS, EWGS

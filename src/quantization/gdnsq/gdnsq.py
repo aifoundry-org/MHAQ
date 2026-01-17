@@ -1,3 +1,4 @@
+from matplotlib import scale
 import torch
 
 from torch import Tensor
