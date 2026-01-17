@@ -88,6 +88,6 @@ class LVisionCls(pl.LightningModule):
         self.log("test_loss", val_loss, prog_bar=True, sync_dist=True)
 
 
-    def predict_step(self, pred_batch):
+    def predict_step(self, pred_batch, batch_idx=0):
         inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
         return self.forward(inputs)

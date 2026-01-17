@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: RFDN
-        note: "signed activations + calibration"
+        note: ""
  
   callbacks:
     NoiseModelCheckpoint:

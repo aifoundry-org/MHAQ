@@ -42,7 +42,10 @@ class LVisionSR(pl.LightningModule):
         return self.optimizer(self.parameters(), self.lr)
 
     def forward(self, inputs):
-        return self.model(inputs)
+        if self.denormalize:
+            return self.model(inputs * 255).div(255)
+        else:
+            return self.model(inputs)
 
     def _shared_step(self, batch: Tuple):
         dataset_name = None
@@ -55,10 +58,7 @@ class LVisionSR(pl.LightningModule):
         else:
             inputs = batch
             target = None
-        if self.denormalize:
-            outputs = self.forward(inputs * 255).div(255)
-        else:
-            outputs = self.forward(inputs)
+        outputs = self.forward(inputs)
         loss = self.criterion(outputs, target)
         return outputs, target, loss, dataset_name
 
@@ -179,11 +179,7 @@ class LVisionSR(pl.LightningModule):
 
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
         inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
-        if self.denormalize:
-            # return self.forward(inputs * 255).div(255).clamp(0,1)
-            return self.forward(inputs * 255).div(255)
-        else:
-            return self.forward(inputs).clamp(0,1)
+        return self.forward(inputs).clamp(0,1)
 
     def on_validation_epoch_start(self) -> None:
         self._reset_stage_psnr_tracking("val")
