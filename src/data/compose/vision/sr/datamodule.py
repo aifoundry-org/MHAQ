@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional, Sequence, Dict
 from lightning import pytorch as pl
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 
-from .datasets import B100, Div2K, Set5, Set14, Urban100
+from .datasets import B100, DF2K, Div2K, Flickr2K, Set5, Set14, Urban100
 from .transforms import (
     AdjustToScale,
     Compose,
@@ -17,6 +17,12 @@ _BENCHMARK_REGISTRY = {
     "Set14": Set14,
     "B100": B100,
     "Urban100": Urban100,
+}
+
+_TRAIN_REGISTRY = {
+    "DIV2K": Div2K,
+    "Flickr2K": Flickr2K,
+    "DF2K": DF2K,
 }
 
 
@@ -49,7 +55,8 @@ class SuperResolutionDataModule(pl.LightningDataModule):
     LightningDataModule that wires the super-resolution datasets.
 
     DIV2K is used for training while Set5, Set14, B100 and Urban100 are
-    concatenated for validation/test by default.
+    concatenated for validation/test by default. Training datasets can be
+    selected from DIV2K, Flickr2K, or DF2K (DIV2K+Flickr2K).
     """
 
     def __init__(
@@ -70,6 +77,7 @@ class SuperResolutionDataModule(pl.LightningDataModule):
         preload: bool = False,
         prefetch_factor: int = 2,
         pin_memory: bool = True,
+        train_sets: Optional[Iterable[str]] = None,
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
@@ -92,6 +100,9 @@ class SuperResolutionDataModule(pl.LightningDataModule):
             div2k_splits = ("train", "val")
         self.div2k_splits: Sequence[str] = tuple(div2k_splits)
         self.benchmark_split = benchmark_split
+        if train_sets is None:
+            train_sets = ("DIV2K",)
+        self.train_sets: List[str] = [name for name in train_sets]
 
         self.train_dataset: Optional[Dataset] = None
         self._benchmark_dataset: Optional[Dataset] = None
@@ -100,17 +111,35 @@ class SuperResolutionDataModule(pl.LightningDataModule):
         if not self.download:
             return
 
-        for split in self.div2k_splits:
-            Div2K(
-                root=self.data_dir,
-                scale=self.scale,
-                track=self.track,
-                split=split,
-                transform=None,
-                download=True,
-                preload=self.preload,
-                predecode=not self.preload,
-            )
+        for name in self.train_sets:
+            if name not in _TRAIN_REGISTRY:
+                raise ValueError(
+                    f"Unknown training dataset '{name}'. "
+                    f"Use one of {sorted(_TRAIN_REGISTRY)}"
+                )
+            if name == "DIV2K":
+                for split in self.div2k_splits:
+                    Div2K(
+                        root=self.data_dir,
+                        scale=self.scale,
+                        track=self.track,
+                        split=split,
+                        transform=None,
+                        download=True,
+                        preload=self.preload,
+                        predecode=not self.preload,
+                    )
+            else:
+                _TRAIN_REGISTRY[name](
+                    root=self.data_dir,
+                    scale=self.scale,
+                    track=self.track,
+                    split="train",
+                    transform=None,
+                    download=True,
+                    preload=self.preload,
+                    predecode=not self.preload,
+                )
 
     def setup(self, stage: Optional[str] = None) -> None:
         if stage in (None, "fit"):
@@ -141,20 +170,40 @@ class SuperResolutionDataModule(pl.LightningDataModule):
 
     def _build_train_dataset(self) -> Dataset:
         datasets: List[Dataset] = []
-        for split in self.div2k_splits:
-            dataset = Div2K(
-                root=self.data_dir,
-                scale=self.scale,
-                track=self.track,
-                split=split,
-                transform=self._build_train_transform(),
-                download=self.download,
-                preload=self.preload,
-                predecode=not self.preload,
-            )
-            datasets.append(_SRPairDataset(dataset))
+        for name in self.train_sets:
+            if name not in _TRAIN_REGISTRY:
+                raise ValueError(
+                    f"Unknown training dataset '{name}'. "
+                    f"Use one of {sorted(_TRAIN_REGISTRY)}"
+                )
+            if name == "DIV2K":
+                for split in self.div2k_splits:
+                    dataset = Div2K(
+                        root=self.data_dir,
+                        scale=self.scale,
+                        track=self.track,
+                        split=split,
+                        transform=self._build_train_transform(),
+                        download=self.download,
+                        preload=self.preload,
+                        predecode=not self.preload,
+                    )
+                    datasets.append(_SRPairDataset(dataset))
+            else:
+                dataset_cls = _TRAIN_REGISTRY[name]
+                dataset = dataset_cls(
+                    root=self.data_dir,
+                    scale=self.scale,
+                    track=self.track,
+                    split="train",
+                    transform=self._build_train_transform(),
+                    download=self.download,
+                    preload=self.preload,
+                    predecode=not self.preload,
+                )
+                datasets.append(_SRPairDataset(dataset))
         if not datasets:
-            raise RuntimeError("No DIV2K splits configured for training.")
+            raise RuntimeError("No training datasets configured for SR.")
         if len(datasets) == 1:
             return datasets[0]
         return ConcatDataset(datasets)
