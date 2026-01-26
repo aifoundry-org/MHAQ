@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional, Sequence, Dict
 from lightning import pytorch as pl
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 
-from .datasets import B100, DF2K, Div2K, Flickr2K, Set5, Set14, Urban100
+from .datasets import B100, DF2K, Div2K, Flickr2K, Set5, Set14, Urban100, Manga109
 from .transforms import (
     AdjustToScale,
     Compose,
@@ -17,6 +17,7 @@ _BENCHMARK_REGISTRY = {
     "Set14": Set14,
     "B100": B100,
     "Urban100": Urban100,
+    "Manga109": Manga109,
 }
 
 _TRAIN_REGISTRY = {
@@ -77,7 +78,8 @@ class SuperResolutionDataModule(pl.LightningDataModule):
         preload: bool = False,
         prefetch_factor: int = 2,
         pin_memory: bool = True,
-        train_sets: Optional[Iterable[str]] = None,
+        # train_sets: Optional[Iterable[str]] = None,
+        train_sets: Optional[Iterable[str]] = ("DF2K"),
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
@@ -211,13 +213,13 @@ class SuperResolutionDataModule(pl.LightningDataModule):
     def _build_val_datasets(self) -> dict:
         transform = self._build_eval_transform()
         loaders: Dict[str, DataLoader] = {}
-        benchmarks = [
-            ("Set5", Set5),
-            ("Set14", Set14),
-            ("B100", B100),
-            ("Urban100", Urban100),
-        ]
-        for name, dataset_cls in benchmarks:
+        for name in self.benchmark_sets:
+            if name not in _BENCHMARK_REGISTRY:
+                raise ValueError(
+                    f"Unknown benchmark dataset '{name}'. "
+                    f"Use one of {sorted(_BENCHMARK_REGISTRY)}"
+                )
+            dataset_cls = _BENCHMARK_REGISTRY[name]
             dataset = dataset_cls(
                 root=self.data_dir,
                 scale=self.scale,

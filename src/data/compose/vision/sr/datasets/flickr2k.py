@@ -23,7 +23,7 @@ class Flickr2K(FolderByDir):
     """
 
     urls = [
-        ("https://cv.snu.ac.kr/research/EDSR/Flickr2K.tar", "a4a9cfae1bf6db6af5e0b5b14d7c43f6"), # TODO CHANGE HASH TO ACTUAL
+        ("https://cv.snu.ac.kr/research/EDSR/Flickr2K.tar", "5d3f39443d5e9489bff8963f8f26cb03"),
     ]
 
     track_dirs = {

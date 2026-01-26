@@ -40,7 +40,7 @@ training:
 data:
   dataset_name: SR
   data_dir: ./data/
-  batch_size: 24
+  batch_size: 96
   num_workers: 8
   params:
     denormalize: True

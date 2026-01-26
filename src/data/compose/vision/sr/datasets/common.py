@@ -168,5 +168,13 @@ class FolderByDir(Folder):
                     filename = data[2]
             if (self.root, url) in self.already_downloaded_urls:
                 continue
+            if md5sum is not None:
+                archive_name = filename or os.path.basename(url)
+                archive_path = os.path.join(self.root, archive_name)
+                if os.path.isfile(archive_path) and torchvision.datasets.utils.check_integrity(
+                        archive_path, md5sum):
+                    # Archive already present and verified; skip download/extraction.
+                    self.already_downloaded_urls.append((self.root, url))
+                    continue
             torchvision.datasets.utils.download_and_extract_archive(url, self.root, filename=filename, md5=md5sum)
             self.already_downloaded_urls.append((self.root, url))
