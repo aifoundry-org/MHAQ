@@ -30,8 +30,6 @@ from collections import OrderedDict
 class GDNSQQuant(BaseQuant):
     def __init__(self, config):
         super().__init__(config)
-        self.activations_zero_point = self.config.quantization.activation_zero_point
-        # self.activations_zero_point = -0.2784645427610738
 
     def module_mappings(self):
         return {
@@ -501,12 +499,7 @@ class GDNSQQuant(BaseQuant):
         return qmodule
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
-        disabled = False
-        if (
-            self.config.quantization.act_bit == -1
-            or self.config.quantization.act_bit > 20
-        ):
-            disabled = True
+        disabled = self.config.quantization.act_bit == -1
         sequence = nn.Sequential(
             OrderedDict(
                 [
@@ -515,7 +508,6 @@ class GDNSQQuant(BaseQuant):
                         NoisyAct(
                             signed=True,
                             disable=disabled,
-                            init_zero_point=self.activations_zero_point,
                         ),
                     ),
                     ("0", qmodule),
