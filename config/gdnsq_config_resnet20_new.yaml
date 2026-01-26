@@ -44,8 +44,8 @@ data:
 quantization:
   name: GDNSQQuant
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  weight_bit: 4
-  act_bit: 4
+  weight_bit: 1
+  act_bit: 1
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False
