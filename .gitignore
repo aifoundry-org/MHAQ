@@ -171,6 +171,7 @@ lightning_logs/
 
 data/*
 logs/*
+!data/models
 !data/.gitkeep
 wandb
 

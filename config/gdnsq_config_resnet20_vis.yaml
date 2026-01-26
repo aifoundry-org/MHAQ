@@ -1,0 +1,45 @@
+model:
+  type: VISION_CLS
+  name: resnet20
+  params:
+    pretrained: True
+    num_classes: 10
+
+training:
+  criterion: CrossEntropyLoss
+  optimizer: Adam
+  learning_rate: 0.001
+  max_epochs: 700
+  val_every_n_epochs: 2
+  log_every_n_steps: 10
+  loggers:
+    WandbLogger:
+      params:
+        name: resnet20-gdnsq
+        note: "VAL TEST"
+ 
+  callbacks:
+    DistillViolinVis:
+      params:
+        name: 1
+    ReduceLrOnOutlier:
+      params:
+        reduce_scale: 8
+    RandNoiseScale:
+      params:
+        reduce_scale: 2
+
+data:
+  dataset_name: CIFAR10
+  batch_size: 1
+  num_workers: 10
+
+
+quantization:
+  name: GDNSQQuant
+  qscheme: 1 # 0 for per-tensor, 1 for per-channel
+  act_bit: 21
+  weight_bit: 2
+  excluded_layers:
+    - 'module.linear'
+    - 'module.conv1'
