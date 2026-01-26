@@ -57,6 +57,33 @@ class QNSTE(QNoise):
         return grad_input, grad_scale
 
 
+class QNLSQ(QNoise):
+
+    @staticmethod
+    def backward(ctx, grad_output: Tensor):
+        # This is a pattern that is very convenient - at the top of backward
+        # unpack saved_tensors and initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+        input, scale = ctx.saved_tensors
+        grad_input = grad_scale = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+        if ctx.needs_input_grad[0]:
+            # STE
+            grad_input = grad_output * 0
+
+        if ctx.needs_input_grad[1]:
+            r = torch.round(input) - input
+            grad_scale = grad_output * r
+
+        return grad_input, grad_scale
+
+
 class QNEWGS(QNoise):
 
     @staticmethod
@@ -208,5 +235,7 @@ class Quantizer:
             return QNEWGS.apply(value, scale)
         elif self.qnmethod == QNMethod.AEWGS:
             return QNAEWGS.apply(value, scale)
+        elif self.qnmethod == QNMethod.LSQ:
+            return QNLSQ.apply(value, scale)
         else:
             raise AttributeError(f"Unknown method {self.qnmethod}!")
