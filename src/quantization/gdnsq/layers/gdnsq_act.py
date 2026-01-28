@@ -19,8 +19,8 @@ class NoisyAct(nn.Module):
         super().__init__()
         self.disable = disable
         self.signed = signed
-        zero_point = 0.0 if not signed else -torch.exp2(torch.tensor(init_q - 1).float())
-        self._act_b = torch.tensor([zero_point]).float()
+        biased_point = 0.0 if not signed else -torch.exp2(torch.tensor(init_q - 1).float())
+        self._act_b = torch.tensor([biased_point]).float()
         self._log_act_s = torch.tensor([init_s]).float()
         self._log_act_q = torch.tensor([init_q]).float()
         self._noise_ratio = torch.tensor(noise_ratio)
