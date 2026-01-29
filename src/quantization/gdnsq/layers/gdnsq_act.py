@@ -13,14 +13,14 @@ class NoisyAct(nn.Module):
         init_q=10,
         signed=True,
         noise_ratio=1,
-        disable=False,
-        init_zero_point=0.0,
+        disable=False,        
         qnmethod: QNMethod = QNMethod.STE,
     ) -> None:
         super().__init__()
         self.disable = disable
         self.signed = signed
-        self._act_b = torch.tensor([init_zero_point]).float()
+        zero_point = 0.0 if not signed else -torch.exp2(torch.tensor(init_q - 1).float())
+        self._act_b = torch.tensor([zero_point]).float()
         self._log_act_s = torch.tensor([init_s]).float()
         self._log_act_q = torch.tensor([init_q]).float()
         self._noise_ratio = torch.tensor(noise_ratio)

@@ -1,0 +1,67 @@
+
+model:
+  type: VISION_SR
+  name: RFDN
+  cpt_url: "file://data/models/RFDN_AIM.pth"
+  params:
+    scale: 4
+
+training:
+  criterion: L1Loss
+  optimizer: RAdam
+  learning_rate: 0.0005
+  max_epochs: 2500
+  val_every_n_epochs: 10
+  log_every_n_steps: 10
+  loggers:
+    WandbLogger:
+      params:
+        name: RFDN
+        note: "AEWGS"
+ 
+  callbacks:
+    NoiseModelCheckpoint:
+      params:
+        monitor: PSNR/Weighted_mean
+        mode: max
+        filename: gdnsq_checkpoint-{epoch:02d}-"{PSNR/Weighted_mean:.4f}"
+    TemperatureScale:
+      params:
+        scale_lr: 1
+        scale_anneal: 0.9999
+        warmup: 500
+    NoiseEarlyStopping:
+      params:
+        monitor: PSNR/Weighted_mean
+        mode: max
+        patience: 1000
+        min_delta: 0.00005
+
+data:
+  dataset_name: SR
+  data_dir: ./data/
+  batch_size: 24
+  num_workers: 8
+  params:
+    denormalize: True
+    to_luminance: True
+
+
+quantization:
+  name: GDNSQQuant
+  quantize_bias: False
+  qscheme: 1 # 0 for per-tensor, 1 for per-channel
+  act_bit: 2
+  weight_bit: 2
+  excluded_layers:
+    - 'fea_conv'
+    - 'upsampler.0'
+  calibration:
+    act_bit: 10
+    weight_bit: 10
+  params:
+    distillation: False
+    distillation_loss: L1
+    qnmethod: AEWGS
+
+

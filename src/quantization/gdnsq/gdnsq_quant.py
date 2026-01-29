@@ -30,8 +30,6 @@ from collections import OrderedDict
 class GDNSQQuant(BaseQuant):
     def __init__(self, config):
         super().__init__(config)
-        self.activations_zero_point = self.config.quantization.activation_zero_point
-        # self.activations_zero_point = -0.2784645427610738
 
     def module_mappings(self):
         return {
@@ -134,11 +132,11 @@ class GDNSQQuant(BaseQuant):
                         qmodel.model, layer, layer_names[layer_names.index(layer) + 1]
                     )
                 if issubclass(
-                    preceding_layer_type, (nn.ReLU, nn.SiLU)
+                    preceding_layer_type, (nn.ReLU)
                 ):  # XXX: hack shoul be changed through config
-                    qmodule = self._quantize_module(module, signed_Activations=False)
+                    qmodule = self._quantize_module(module, signed_activations=False)
                 else:
-                    qmodule = self._quantize_module(module, signed_Activations=False)
+                    qmodule = self._quantize_module(module, signed_activations=True)
 
                 attrsetter(layer)(qmodel.model, qmodule)
 
@@ -482,7 +480,7 @@ class GDNSQQuant(BaseQuant):
             self.qscheme = self.quant_config.qscheme
             self.quant_bias = self.quant_config.quantize_bias
 
-    def _quantize_module(self, module, signed_Activations):
+    def _quantize_module(self, module, signed_activations):
         self.qnmethod = QNMethod[self.quant_config.params.qnmethod]
         if isinstance(module, nn.Conv2d):
             qmodule = self._quantize_module_conv2d(module)
@@ -496,26 +494,20 @@ class GDNSQQuant(BaseQuant):
         if is_biased(module):
             qmodule.bias = module.bias
 
-        qmodule = self._get_quantization_sequence(qmodule, signed_Activations)
+        qmodule = self._get_quantization_sequence(qmodule, signed_activations)
 
         return qmodule
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
-        disabled = False
-        if (
-            self.config.quantization.act_bit == -1
-            or self.config.quantization.act_bit > 20
-        ):
-            disabled = True
+        disabled = self.config.quantization.act_bit == -1
         sequence = nn.Sequential(
             OrderedDict(
                 [
                     (
                         "activations_quantizer",
                         NoisyAct(
-                            signed=True,
+                            signed=signed_activations,
                             disable=disabled,
-                            init_zero_point=self.activations_zero_point,
                         ),
                     ),
                     ("0", qmodule),

@@ -48,10 +48,6 @@ def apply_mean_stats_activations(module, abits=8, max_bits = 24):
             m.min_values = torch.Tensor([])
             m.max_values = torch.Tensor([])
 
-            if not m.act_b.requires_grad:
-                # keep offset
-                min = m.act_b.data.to(min)
-
             if not m.log_act_q.requires_grad and not m.log_act_s.requires_grad:
                 abits = max_bits
 
