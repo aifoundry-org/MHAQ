@@ -62,5 +62,7 @@ def main():
     validator.callbacks[idx] = trainer.callbacks[idx]
     validator.test(qmodel, datamodule=data, ckpt_path="best")
 
+    validator.predict(qmodel, datamodule=data, ckpt_path="best")
+
 if __name__ == "__main__":
     main()

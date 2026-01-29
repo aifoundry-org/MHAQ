@@ -1,10 +1,14 @@
 from collections import defaultdict
 from typing import Any, Dict, Tuple
 from src.data.compose.vision.sr.transforms.transforms import to_luminance
+from src.loggers.default_logger import logger
 
 import lightning.pytorch as pl
+import torchvision
 import torchmetrics
 import piq
+import os
+
 
 class LVisionSR(pl.LightningModule):
     def __init__(self, setup: Dict, *args: Any, **kwargs: Any) -> None:
@@ -28,7 +32,8 @@ class LVisionSR(pl.LightningModule):
             "PSNR": piq.psnr,
             "SSIM": piq.ssim,
         }
-        self._stage_metrics: Dict[str, Dict[str, Dict[str, torchmetrics.Metric]]] = defaultdict(dict)
+        self._stage_metrics: Dict[str, Dict[str,
+                                            Dict[str, torchmetrics.Metric]]] = defaultdict(dict)
         self._stage_psnr_sums: Dict[str, Dict[str, float]] = {
             "val": defaultdict(float),
             "test": defaultdict(float),
@@ -94,7 +99,8 @@ class LVisionSR(pl.LightningModule):
         dataset_name: str | None,
         loader_idx: int,
     ):
-        batch_size = batch[0].size(0) if isinstance(batch, (tuple, list)) else batch.size(0)
+        batch_size = batch[0].size(0) if isinstance(
+            batch, (tuple, list)) else batch.size(0)
         # dataset_key = dataset_name or f"loader_{loader_idx}"
         metrics = self._get_metrics(stage, "")
         for metric_name, metric in metrics.items():
@@ -109,7 +115,7 @@ class LVisionSR(pl.LightningModule):
                 batch_size=batch_size,
                 add_dataloader_idx=False,
                 sync_dist=True
-                )
+            )
             self.trainer.logged_metrics[f"{metric_name}/{dataset_name}"] = metric_value
             if metric_name == "PSNR" and dataset_name and stage in self._stage_psnr_sums:
                 psnr_scalar = metric_value.detach()
@@ -144,7 +150,7 @@ class LVisionSR(pl.LightningModule):
 
     def validation_step(self, val_batch, val_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(val_batch)
-        outputs = outputs.clamp(0,1)  # clamping pixel values ..
+        outputs = outputs.clamp(0, 1)  # clamping pixel values ..
         # outputs = outputs.mul(255).round().div(255)
         if self.to_luminance:
             outputs = to_luminance(outputs)
@@ -162,7 +168,7 @@ class LVisionSR(pl.LightningModule):
 
     def test_step(self, test_batch, test_index, dataloader_idx=0):
         outputs, target, loss, dataset_name = self._shared_step(test_batch)
-        outputs = outputs.clamp(0,1) 
+        outputs = outputs.clamp(0, 1)
         if self.to_luminance:
             outputs = to_luminance(outputs)
             target = to_luminance(target)
@@ -178,20 +184,45 @@ class LVisionSR(pl.LightningModule):
         return loss
 
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
-        inputs = pred_batch[0] if isinstance(pred_batch, (tuple, list)) else pred_batch
-        return self.forward(inputs).clamp(0,1)
+        inputs = pred_batch[0] if isinstance(
+            pred_batch, (tuple, list)) else pred_batch
+        output = self.forward(inputs).clamp(0, 1)
+        torchvision.utils.save_image(output, os.path.join(
+            self.predict_dataset_path, f"{batch_idx}.png"))
+        # return self.forward(inputs).clamp(0,1)
+
+    def on_predict_start(self) -> None:
+        self.logger_path = os.path.join(
+            self.trainer.logger.save_dir, self.trainer.logger.name, self.trainer.logger.version)
+        self.predict_path = os.path.join(self.logger_path, "predicted")
+        self.dataset_index_mapping = list(
+            self.trainer.predict_dataloaders.keys())
+        os.makedirs(self.predict_path, exist_ok=True)
+        return super().on_predict_start()
+
+    def on_predict_batch_start(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
+        self.predict_dataset_path = os.path.join(
+            self.predict_path, f"{self.dataset_index_mapping[dataloader_idx]}")
+        os.makedirs(self.predict_dataset_path, exist_ok=True)
+        return super().on_predict_batch_start(batch, batch_idx, dataloader_idx)
+
+    def on_predict_end(self) -> None:
+        logger.warning(f"\nPredictions saved at {self.predict_path}")
+        return super().on_predict_end()
 
     def on_validation_epoch_start(self) -> None:
         self._reset_stage_psnr_tracking("val")
 
     def on_validation_epoch_end(self) -> None:
-        self._log_weighted_psnr(stage="val", log_name="PSNR/Weighted_mean", prog_bar=False)
+        self._log_weighted_psnr(
+            stage="val", log_name="PSNR/Weighted_mean", prog_bar=False)
 
     def on_test_epoch_start(self) -> None:
         self._reset_stage_psnr_tracking("test")
 
     def on_test_epoch_end(self) -> None:
-        self._log_weighted_psnr(stage="test", log_name="PSNR/Weighted_mean_test", prog_bar=False)
+        self._log_weighted_psnr(
+            stage="test", log_name="PSNR/Weighted_mean_test", prog_bar=False)
 
     def _reset_stage_psnr_tracking(self, stage: str) -> None:
         if stage in self._stage_psnr_sums:

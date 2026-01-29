@@ -1,5 +1,4 @@
 import torch
-import logging
 import torchmetrics
 import lightning.pytorch as pl
 from src.loggers.default_logger import logger
@@ -185,4 +184,5 @@ class LVisionOD(pl.LightningModule):
         self.mAP.update(output, target)
 
     def predict_step(self, *args, **kwargs):
-        raise NotImplementedError("Predict is not yet implemented for OD networks!")
+        pass
+        # raise NotImplementedError("Predict is not yet implemented for OD networks!")
