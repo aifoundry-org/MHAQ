@@ -79,7 +79,7 @@ class SuperResolutionDataModule(pl.LightningDataModule):
         prefetch_factor: int = 2,
         pin_memory: bool = True,
         # train_sets: Optional[Iterable[str]] = None,
-        train_sets: Optional[Iterable[str]] = ("DF2K"),
+        train_sets: Optional[Iterable[str]] = ("DF2K",),
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
