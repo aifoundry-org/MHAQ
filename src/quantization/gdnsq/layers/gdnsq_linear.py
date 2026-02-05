@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-from typing import Tuple
 from torch import nn, inf
 
 from src.aux.types import QScheme
@@ -21,10 +20,15 @@ class NoisyLinear(nn.Linear):
         qscheme: QScheme = QScheme.PER_TENSOR,
         log_s_init: float = -12,
         rand_noise: bool = False,
-        qnmethod: QNMethod = QNMethod.STE,
+        quant_bias: bool = False,
+        qnmethod: QNMethod = QNMethod.AEWGS,
     ) -> None:
         super().__init__(in_features, out_features, bias, device, dtype)
         self.qscheme = qscheme
+        self.quant_bias = quant_bias
+        self.rand_noise = rand_noise
+        self._noise_ratio = nn.Parameter(
+            torch.Tensor([1]), requires_grad=False)
 
         if self.qscheme == QScheme.PER_TENSOR:
             self.log_wght_s = nn.Parameter(
@@ -35,28 +39,17 @@ class NoisyLinear(nn.Linear):
                 torch.empty((out_features, 1)).fill_(log_s_init), requires_grad=True
             )
 
-        self._noise_ratio = nn.Parameter(
-            torch.Tensor(
-                [
-                    1,
-                ]
-            ),
-            requires_grad=False,
-        )
+        if self.quant_bias:
+            self.log_b_s = nn.Parameter(
+                torch.empty(1).fill_(log_s_init), requires_grad=False
+            )
+            self.Q_b = Quantizer(
+                self, torch.exp2(self.log_b_s), 0, -inf, inf, qnmethod=qnmethod
+            )
+
         self.Q = Quantizer(
             self, torch.exp2(self.log_wght_s), 0, -inf, inf, qnmethod=qnmethod
         )
-
-        if self.qscheme == QScheme.PER_TENSOR:
-            self.log_wght_s = nn.Parameter(
-                torch.Tensor([log_s_init]), requires_grad=True
-            )
-        elif self.qscheme == QScheme.PER_CHANNEL:
-            self.log_wght_s = nn.Parameter(
-                torch.empty((out_features, 1, 1, 1)).fill_(log_s_init),
-                requires_grad=True,
-            )
-        self.rand_noise = rand_noise
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         s = torch.exp2(self.log_wght_s)
@@ -68,14 +61,26 @@ class NoisyLinear(nn.Linear):
         )
 
         if self.qscheme == QScheme.PER_CHANNEL:
-            min = self.weight.amin((1, 2, 3), keepdim=True)
+            min = self.weight.amin(1, keepdim=True)
         elif self.qscheme == QScheme.PER_TENSOR:
             min = self.weight.amin()
         self.Q.zero_point = min
 
+        if self.quant_bias:
+            self.Q_b.scale = s.ravel()
+            self.Q_b.zero_point = min.ravel()
+            self.Q_b.rnoise_ratio.data = (
+                self._noise_ratio
+                if self.rand_noise
+                else torch.zeros_like(self._noise_ratio)
+            )
+            bias = self.Q_b.dequantize(self.Q_b.quantize(self.bias))
+        else:
+            bias = self.bias
+
         weight = self.Q.dequantize(self.Q.quantize(self.weight))
 
-        return F.linear(input, weight, self.bias)
+        return F.linear(input, weight, bias)
 
     def extra_repr(self) -> str:
         bias = is_biased(self)

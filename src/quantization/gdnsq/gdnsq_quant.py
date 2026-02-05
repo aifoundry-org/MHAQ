@@ -12,7 +12,7 @@ from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.quantization.gdnsq.utils.model_helper import ModelHelper
 from src.quantization.gdnsq.gdnsq_loss import PotentialLoss, PotentialLossNoPred
 from src.quantization.gdnsq.gdnsq_utils import QNMethod
-from src.quantization.gdnsq.utils import model_stats
+from src.quantization.gdnsq.utils import model_stats, fusing
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
@@ -34,7 +34,7 @@ class GDNSQQuant(BaseQuant):
     def module_mappings(self):
         return {
             nn.Conv2d: NoisyConv2d,
-            # nn.Linear: NoisyLinear,
+            nn.Linear: NoisyLinear,
         }
 
     def get_loss(self, qmodel):
@@ -122,23 +122,9 @@ class GDNSQQuant(BaseQuant):
         # Replacing layers directly
         qlayers = self._get_layers(lmodel.model, exclude_layers=self.excluded_layers)
         for layer in qlayers.keys():
-            module = attrgetter(layer)(lmodel.model)
-            if module.kernel_size != (1, 1):
-                # print(layer + " " + repr(module.kernel_size))
-                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-                following_layer_type = layer_types[layer_names.index(layer) + 1]
-                if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
-                    self.fuse_conv_bn(
-                        qmodel.model, layer, layer_names[layer_names.index(layer) + 1]
-                    )
-                if issubclass(
-                    preceding_layer_type, (nn.ReLU)
-                ):  # XXX: hack shoul be changed through config
-                    qmodule = self._quantize_module(module, signed_activations=False)
-                else:
-                    qmodule = self._quantize_module(module, signed_activations=True)
+            qmodule = self._quantize_module(qmodel, layer, layer_names, layer_types)
 
-                attrsetter(layer)(qmodel.model, qmodule)
+            attrsetter(layer)(qmodel.model, qmodule)
 
         if self.config.quantization.freeze_batchnorm:
             GDNSQQuant.freeze_all_batchnorm_layers(qmodel)
@@ -157,31 +143,6 @@ class GDNSQQuant(BaseQuant):
                 # Freeze BN params
                 module.weight.requires_grad = not freeze
                 module.bias.requires_grad = not freeze
-
-    def fuse_conv_bn(self, model: nn.Module, conv_name: str, bn_name: str):
-        conv = attrgetter(conv_name)(model)
-
-        W = conv.weight.clone()
-        if conv.bias is not None:
-            b = conv.bias.clone()
-        else:
-            b = torch.zeros(conv.out_channels, device=W.device)
-
-        bn = attrgetter(bn_name)(model)
-        mu = bn.running_mean
-        var = bn.running_var
-        eps = bn.eps
-        gamma = bn.weight
-        beta = bn.bias
-
-        std = torch.sqrt(var + eps)
-        scale = gamma / std
-        shape = [-1] + [1] * (W.dim() - 1)
-
-        conv.weight.data = W * scale.view(shape)
-        conv.bias = nn.Parameter(beta + (b - mu) * scale)
-
-        attrsetter(bn_name)(model, nn.Identity())  # Replacing bn module with Identity
 
     @staticmethod
     def noise_ratio(self, x=None):
@@ -480,12 +441,34 @@ class GDNSQQuant(BaseQuant):
             self.qscheme = self.quant_config.qscheme
             self.quant_bias = self.quant_config.quantize_bias
 
-    def _quantize_module(self, module, signed_activations):
+    def _quantize_module(self, qmodel, layer, layer_names, layer_types):
+        module = attrgetter(layer)(qmodel.model)
         self.qnmethod = QNMethod[self.quant_config.params.qnmethod]
+
+        preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+        following_layer_type = layer_types[layer_names.index(layer) + 1]
+
+        if issubclass(preceding_layer_type, nn.ReLU):
+            signed_activations = False
+        else:
+            signed_activations = True
+        
+        # CONV2D
         if isinstance(module, nn.Conv2d):
-            qmodule = self._quantize_module_conv2d(module)
+            if module.kernel_size != (1, 1): # @iceslice0 I'm still not really ok with that..
+                if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
+                    # ACHTUNG! Is the module changed after bing extracted?
+                    fusing.fuse_conv_bn(
+                        qmodel.model, layer, layer_names[layer_names.index(layer) + 1]
+                        )
+
+                qmodule = self._quantize_module_conv2d(module)
+            else:
+                return module
+        #LINEAR            
         elif isinstance(module, nn.Linear):
             qmodule = self._quantize_module_linear(module)
+
         else:
             raise NotImplementedError(f"Module not supported {type(module)}")
 

@@ -153,8 +153,11 @@ def get_layer_wnb_bit_width(
         # min_b = layer_bias.amin()
         # max_b = layer_bias.amax()
     elif config == QScheme.PER_CHANNEL:
-        min = layer_weights.amin((1, 2, 3))
-        max = layer_weights.amax((1, 2, 3))
+        # min = layer_weights.amin((1, 2, 3))
+        # max = layer_weights.amax((1, 2, 3))
+        reduce_dims = tuple(range(1, layer_weights.dim()))
+        min = layer_weights.amin(reduce_dims, keepdim=True)
+        max = layer_weights.amax(reduce_dims, keepdim=True)
 
         # min_b = layer_bias.amin()
         # max_b = layer_bias.amax()

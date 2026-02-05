@@ -71,8 +71,9 @@ def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channe
     for name, m in module.named_modules():
         # TODO: qscheme
         if isinstance(m, (NoisyLinear, NoisyConv2d)):
-            max_ = m.weight.detach().amax((1, 2, 3))
-            min_ = m.weight.detach().amin((1, 2, 3))
+            reduce_dims = tuple(range(1, m.weight.dim()))
+            max_ = m.weight.detach().amax(reduce_dims, keepdim=True)
+            min_ = m.weight.detach().amin(reduce_dims, keepdim=True)
 
             if not m.log_wght_s.requires_grad:
                 wbits = max_bits
