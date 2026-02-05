@@ -50,12 +50,9 @@ quantization:
   freeze_batchnorm: False
   fuse_batchnorm: False
   quantize_bias: False
-  activation_zero_point: 0.0
   excluded_layers:
     - 'linear'
     - 'conv1'
-#     - 'module.linear'
-#     - 'module.conv1'
   calibration:
     act_bit: 10
     weight_bit: 10

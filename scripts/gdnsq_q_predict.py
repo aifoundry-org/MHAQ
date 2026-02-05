@@ -12,22 +12,25 @@ from src.config.config_loader import load_and_validate_config
 from src.data.compose.composer import DatasetComposer
 from src.models.compose.composer import ModelComposer
 from src.quantization.quantizer import Quantizer
-from src.training.trainer import Trainer, Validator
+from src.training.trainer import Validator
 from src.loggers.default_logger import logger
 
 torch.set_float32_matmul_precision('high')
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
+    parser = argparse.ArgumentParser(description="Run GDNSQ prediction.")
     parser.add_argument(
-        "--config", 
-        type=str, 
-        required=False, 
+        "--config",
+        type=str,
+        required=True,
         help="Path to the configuration file (YAML).",
-        # default="config/gdnsq_config_yolo11.yaml"
-        # default="config/gdnsq_config_resnet20_old.yaml"
-        # default="config/gdnsq_config_rfdn.yaml"
-        default="config/gdnsq_config_mambairv2light.yaml"
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        required=True,
+        help="Path to the checkpoint (.ckpt) to use for prediction.",
     )
     return parser.parse_args()
 
@@ -40,30 +43,14 @@ def main():
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
     validator = Validator(config=config)
-    trainer = Trainer(config=config)
 
     data = dataset_composer.compose()
     model = model_composer.compose()
-
-    logger.info(f"Validate Model before quantization:\n{model}")
-    validator.validate(model, datamodule=data)
-
     qmodel = quantizer.quantize(model, in_place=True)
 
-    logger.info("Validate model after layers replacement")
-    validator.validate(qmodel, datamodule=data)
-  
-    logger.info("Calibrating model initial weights and scales")
-    validator.calibrate(qmodel, datamodule=data)
+    logger.info("Running prediction")
+    validator.predict(qmodel, datamodule=data, ckpt_path=args.checkpoint)
 
-    # # Finetune model
-    trainer.fit(qmodel, datamodule=data)
-
-    idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
-    validator.callbacks[idx] = trainer.callbacks[idx]
-    validator.test(qmodel, datamodule=data, ckpt_path="best")
-
-    validator.predict(qmodel, datamodule=data, ckpt_path="best")
 
 if __name__ == "__main__":
     main()

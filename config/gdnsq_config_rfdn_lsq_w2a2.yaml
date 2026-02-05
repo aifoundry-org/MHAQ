@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: RFDN
-        note: ""
+        note: "LSQ"
  
   callbacks:
     NoiseModelCheckpoint:
@@ -40,7 +40,7 @@ training:
 data:
   dataset_name: SR
   data_dir: ./data/
-  batch_size: 96
+  batch_size: 24
   num_workers: 8
   params:
     denormalize: True
@@ -51,15 +51,17 @@ quantization:
   name: GDNSQQuant
   quantize_bias: False
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
-  act_bit: 4
-  weight_bit: 4
+  act_bit: 2
+  weight_bit: 2
   excluded_layers:
     - 'fea_conv'
     - 'upsampler.0'
   calibration:
-    act_bit: 10
-    weight_bit: 10
+    act_bit: 2
+    weight_bit: 2
   params:
-    distillation: True
+    distillation: False
     distillation_loss: L1
-    qnmethod: AEWGS
+    qnmethod: LSQ
+
+

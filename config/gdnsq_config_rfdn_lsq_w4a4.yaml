@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: RFDN
-        note: ""
+        note: "LSQ"
  
   callbacks:
     NoiseModelCheckpoint:
@@ -40,7 +40,7 @@ training:
 data:
   dataset_name: SR
   data_dir: ./data/
-  batch_size: 96
+  batch_size: 24
   num_workers: 8
   params:
     denormalize: True
@@ -57,9 +57,11 @@ quantization:
     - 'fea_conv'
     - 'upsampler.0'
   calibration:
-    act_bit: 10
-    weight_bit: 10
+    act_bit: 4
+    weight_bit: 4
   params:
-    distillation: True
+    distillation: False
     distillation_loss: L1
-    qnmethod: AEWGS
+    qnmethod: LSQ
+
+

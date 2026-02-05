@@ -99,7 +99,7 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 | Model     | Dataset  | Method | QW | QA | Best Top-1 |
 |-----------|----------|--------|----|----|------------|
 | Resnet-20 | CIFAR-10 | FP (finetuned)     | -  | -  | 92.82%      |
-| Resnet-20 | CIFAR-10 | GDNSQ   | 1  | 1  | 85.78%      |
+| Resnet-20 | CIFAR-10 | GDNSQ   | 1  | 1  | 85.78% -> 86.50%      |
 | Resnet-20 | CIFAR-10 | GDNSQ   | 1  | 32 | 92.14%      |   
 | Resnet-20 | CIFAR-10 | GDNSQ   | 2  | 2  | 91.4%      |
 | Resnet-20 | CIFAR-10 | GDNSQ   | 3  | 3  | 92.5%      |
@@ -109,7 +109,7 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md)
 | Model     | Dataset   | Method | QW | QA | Best Top-1  |
 |-----------|-----------|--------|----|----|-------------|
 | Resnet-20 | CIFAR-100 | FP     | -  | -  | 70.26%      |
-| Resnet-20 | CIFAR-100 | GDNSQ   | 1  | 1  | 56.94%      |
+| Resnet-20 | CIFAR-100 | GDNSQ   | 1  | 1  | 56.94% -> 58.38%    |
 | Resnet-20 | CIFAR-100 | GDNSQ   | 2  | 2  | 66.41%      |
 | Resnet-20 | CIFAR-100 | GDNSQ   | 3  | 3  | 69.36%      |
 | Resnet-20 | CIFAR-100 | GDNSQ   | 4  | 4  | 70.24%      |

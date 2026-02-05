@@ -17,7 +17,7 @@ training:
     WandbLogger:
       params:
         name: RFDN
-        note: ""
+        note: "AEWGS"
  
   callbacks:
     NoiseModelCheckpoint:
@@ -40,7 +40,7 @@ training:
 data:
   dataset_name: SR
   data_dir: ./data/
-  batch_size: 96
+  batch_size: 24
   num_workers: 8
   params:
     denormalize: True
@@ -60,6 +60,8 @@ quantization:
     act_bit: 10
     weight_bit: 10
   params:
-    distillation: True
+    distillation: False
     distillation_loss: L1
     qnmethod: AEWGS
+
+

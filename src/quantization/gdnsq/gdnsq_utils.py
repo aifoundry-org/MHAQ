@@ -10,3 +10,4 @@ class QNMethod(Enum):
         STE = 0
         EWGS = 1 
         AEWGS = 2
+        LSQ = 3
