@@ -21,11 +21,11 @@ class ModelHelper:
                 if qscheme == QScheme.PER_CHANNEL:
                     log_wght_s.append(module.log_wght_s.ravel())
                     # log_wght_s.append(module.log_b_s)
-                    # min = module.weight.amin((1,2,3))                    
-                    # max = module.weight.amax((1,2,3))
-                    reduce_dims = tuple(range(1, module.weight.dim()))
-                    min = module.weight.amin(reduce_dims, keepdim=True)
-                    max = module.weight.amax(reduce_dims, keepdim=True)
+                    min = module.weight.amin((1,2,3))                    
+                    max = module.weight.amax((1,2,3))
+                    # reduce_dims = tuple(range(1, module.weight.dim()))
+                    # min = module.weight.amin(reduce_dims, keepdim=True)
+                    # max = module.weight.amax(reduce_dims, keepdim=True)
 
                     # min = module.weight.amin((1,2,3))
                     # max = module.weight.amax((1,2,3))
