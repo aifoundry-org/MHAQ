@@ -34,7 +34,7 @@ class GDNSQQuant(BaseQuant):
     def module_mappings(self):
         return {
             nn.Conv2d: NoisyConv2d,
-            # nn.Linear: NoisyLinear,
+            nn.Linear: NoisyLinear,
         }
 
     def get_loss(self, qmodel):
