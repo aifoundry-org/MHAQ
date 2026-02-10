@@ -13,6 +13,7 @@ from src.quantization.gdnsq.utils.model_helper import ModelHelper
 from src.quantization.gdnsq.gdnsq_loss import PotentialLoss, PotentialLossNoPred
 from src.quantization.gdnsq.gdnsq_utils import QNMethod
 from src.quantization.gdnsq.utils import model_stats, fusing
+from src.quantization.gdnsq.utils.model_stats import ModelStats
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
@@ -30,6 +31,7 @@ from collections import OrderedDict
 class GDNSQQuant(BaseQuant):
     def __init__(self, config):
         super().__init__(config)
+        self.model_stats = ModelStats(tuple(self.module_mappings().values()))
 
     def module_mappings(self):
         return {
@@ -116,7 +118,8 @@ class GDNSQQuant(BaseQuant):
             qmodel.training_step = GDNSQQuant.noisy_train_decorator(qmodel.training_step)
             # qmodel.validation_step = GDNSQQuant.noisy_val_decorator(qmodel.validation_step)
 
-        qmodel.validation_step = GDNSQQuant.noisy_val_decorator(qmodel.validation_step)
+        qmodel.on_validation_epoch_start = self.on_validation_epoch_start_decorator(qmodel.on_validation_epoch_start)
+        qmodel.validation_step = self.noisy_val_decorator(qmodel.validation_step)
         qmodel.test_step = GDNSQQuant.noisy_test_decorator(qmodel.test_step)
 
         # Replacing layers directly
@@ -193,69 +196,70 @@ class GDNSQQuant(BaseQuant):
 
         return wrapper
 
-    @staticmethod
-    def noisy_val_decorator(val_step):
-        self = val_step.__self__
+    def noisy_val_decorator(self, val_step):
+
+        qmodel = val_step.__self__
         # self._batch_size = self.trainer.config.data.batch_size
 
         def wrapper(*args):
             loss = val_step(*args)
             # for metric in self.trainer.model.metrics:
-            for metric in self.metrics:
-                if key := [key for key in self.trainer.logged_metrics.keys() if  metric[0] in key][0]:
-                    metric_value = self.trainer.logged_metrics[key]
+            for metric in qmodel.metrics:
+                if key := [key for key in qmodel.trainer.logged_metrics.keys() if  metric[0] in key][0]:
+                    metric_value = qmodel.trainer.logged_metrics[key]
                 # if metric_value := metric[1]._forward_cache:
                 # if metric_value := :
                     if isinstance(metric, list):
                         metric_name = metric[0]
                     else:
                         metric_name = metric
-                    self.log(f"Metric/ns_{metric_name}", 
-                             metric_value * model_stats.is_converged(self), 
+                    qmodel.log(f"Metric/ns_{metric_name}", 
+                            #  metric_value * qmodel.model_stats.is_converged(), 
+                             metric_value * self.model_stats.is_converged(), 
                              prog_bar=False,
                              sync_dist=True)
 
 
-            self.log("Loss/Validation loss", loss, prog_bar=False, sync_dist=True)
+            qmodel.log("Loss/Validation loss", loss, prog_bar=False, sync_dist=True)
 
-            self.log(
+            qmodel.log(
                 "Mean weights bit width",
-                model_stats.get_weights_bit_width_mean(self.model),
+                self.model_stats.get_weights_bit_width_mean(),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
             )
-            self.log(
+            qmodel.log(
                 "Actual weights bit width",
-                model_stats.get_true_weights_width(self.model, max=False),
+                self.model_stats.get_true_weights_width(max=False),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
             )
-            self.log(
+            qmodel.log(
                 "Actual weights max bit width",
-                model_stats.get_true_weights_width(self.model),
+                self.model_stats.get_true_weights_width(),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
             )
-            self.log(
+            qmodel.log(
                 "Mean activations bit width",
-                model_stats.get_activations_bit_width_mean(self.model),
+                self.model_stats.get_activations_bit_width_mean(),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
             )
-            self.log(
+            qmodel.log(
                 "Actual activations bit widths",
-                model_stats.get_true_activations_width(self.model, max=False),
+                self.model_stats.get_true_activations_width(qmodel.model, max=False),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
             )
-            self.log(
+            qmodel.log(
                 "Actual activations max bit widths",
-                model_stats.get_true_activations_width(self.model),
+                self.model_stats.get_true_activations_width(qmodel.model),
                 prog_bar=False,
                 # batch_size=self._batch_size,
                 sync_dist=True,
@@ -526,3 +530,12 @@ class GDNSQQuant(BaseQuant):
             log_s_init=-12,
             qnmethod=self.qnmethod
         )
+    
+    def on_validation_epoch_start_decorator(self, on_validation_epoch_start):
+        qmodel = on_validation_epoch_start.__self__
+
+        def wrapper(*args, **kwargs):
+            on_validation_epoch_start(*args, **kwargs)
+            self.model_stats.update_model_state(qmodel)
+        
+        return wrapper
