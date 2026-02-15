@@ -1,7 +1,7 @@
 import torch
-import logging
 import torchmetrics
 import lightning.pytorch as pl
+from src.loggers.default_logger import logger
 from typing import Any, Dict
 from src.models.od import YOLO_FAMILY
 from src.models.od.loss.yolo_loss import ComputeYoloLoss
@@ -16,9 +16,6 @@ from src.data.compose.vision.od.coco import (
 import torchmetrics.detection
 
 import numpy as np
-
-
-logger = logging.getLogger("lightning.pytorch")
 
 
 class LVisionOD(pl.LightningModule):
@@ -40,10 +37,10 @@ class LVisionOD(pl.LightningModule):
 
         self.lr = setup["lr"]
         self._map = []
-        self._metrics = []
+        self.metrics = []
 
         self._init_metrics()
-    
+
     def on_train_start(self):
         self._batch_size = self.trainer.config.data.batch_size
         return super().on_train_start()
@@ -60,6 +57,7 @@ class LVisionOD(pl.LightningModule):
             prog_bar=False,
             on_epoch=True,
             batch_size=self._batch_size,
+            sync_dist=True,
         )
         self.log(
             f"mAP_50",
@@ -67,10 +65,11 @@ class LVisionOD(pl.LightningModule):
             prog_bar=False,
             on_epoch=True,
             batch_size=self._batch_size,
+            sync_dist=True,
         )
         self.mAP.reset()
         return super().on_validation_epoch_end()
-    
+
     def on_test_epoch_end(self):
         map = self.mAP.compute()
         self.log(
@@ -79,6 +78,7 @@ class LVisionOD(pl.LightningModule):
             prog_bar=False,
             on_epoch=True,
             batch_size=self._batch_size,
+            sync_dist=True,
         )
         self.log(
             f"mAP_50",
@@ -86,6 +86,7 @@ class LVisionOD(pl.LightningModule):
             prog_bar=False,
             on_epoch=True,
             batch_size=self._batch_size,
+            sync_dist=True,
         )
         self.mAP.reset()
         return super().on_test_epoch_end()
@@ -126,15 +127,35 @@ class LVisionOD(pl.LightningModule):
         if self.model._get_name() in YOLO_FAMILY:
             target = {k: torch.cat([d[k] for d in target], dim=0) for k in target[0]}
             loss_box, loss_cls, loss_dfl = self.criterion(output, target)
-            self.log("loss_box", loss_box, prog_bar=False, batch_size=self._batch_size)
-            self.log("loss_cls", loss_cls, prog_bar=False, batch_size=self._batch_size)
-            self.log("loss_dfl", loss_dfl, prog_bar=False, batch_size=self._batch_size)
+            self.log(
+                "loss_box",
+                loss_box,
+                prog_bar=False,
+                batch_size=self._batch_size,
+                sync_dist=True,
+            )
+            self.log(
+                "loss_cls",
+                loss_cls,
+                prog_bar=False,
+                batch_size=self._batch_size,
+                sync_dist=True,
+            )
+            self.log(
+                "loss_dfl",
+                loss_dfl,
+                prog_bar=False,
+                batch_size=self._batch_size,
+                sync_dist=True,
+            )
             loss = (
                 loss_box + loss_cls + loss_dfl
             )  # losses are scaled inside criterion using params
         else:
             loss = self.criterion(output, target)
-        self.log("loss", loss, prog_bar=True, batch_size=self._batch_size)
+        self.log(
+            "loss", loss, prog_bar=True, batch_size=self._batch_size, sync_dist=True
+        )
         return loss
 
     def validation_step(self, val_batch, val_index):
@@ -163,4 +184,5 @@ class LVisionOD(pl.LightningModule):
         self.mAP.update(output, target)
 
     def predict_step(self, *args, **kwargs):
-        raise NotImplementedError("Predict is not yet implemented for OD networks!")
+        pass
+        # raise NotImplementedError("Predict is not yet implemented for OD networks!")
