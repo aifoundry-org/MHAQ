@@ -122,7 +122,7 @@ Quant
 │   ├── quantization # for quantization methods definition
 │   │   ├── abc
 │   │   ├── dummy
-│   │   └── gdnsq
+│   │   └── rniq
 │   └── training    # for specific training regimes
 └── tests           # for tests
 ```
@@ -137,4 +137,4 @@ class may not satisfy your needs.
 4. After that you should be able to wrap model with your quantization approach
 and perform training/tuning.
 
-*You can look into implemented Dummy and GDNSQ methods to understand it further.*
+*You can look into implemented Dummy and RNIQ methods to understand it further.*

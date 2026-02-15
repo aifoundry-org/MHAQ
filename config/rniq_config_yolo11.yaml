@@ -1,0 +1,61 @@
+model:
+  type: VISION_OD
+  name: yolo_v11_n
+  cpt_url: "file://data/models/yolov11_n_best.pt"
+  params:
+    num_classes: 80
+
+training:
+  criterion: yolo_loss
+  optimizer: RAdam
+  learning_rate: 0.0005
+  max_epochs: 40
+  val_every_n_epochs: 1
+  log_every_n_steps: 10
+  loggers:
+    WandbLogger:
+      params:
+        name: yolo_v11_n
+        note: "signed activations + calibration"
+ 
+  callbacks:
+    ModelCheckpoint:
+      params:
+        monitor: mAP
+        mode: max
+        filename: rniq_checkpoint-{epoch:02d}-"{mAP:.2f}"
+    TemperatureScale:
+      params:
+        scale_lr: 1
+        scale_anneal: 0.9999
+        warmup: 500
+    NoiseEarlyStopping:
+      params:
+        monitor: mAP
+        mode: max
+        patience: 5
+        min_delta: 0.001
+
+data:
+  dataset_name: COCO
+  data_dir: ./data/
+  batch_size: 24
+  num_workers: 8
+
+
+quantization:
+  name: RNIQQuant
+  qscheme: 1 # 0 for per-tensor, 1 for per-channel
+  act_bit: 4
+  weight_bit: 4
+  excluded_layers:
+    - 'net.p1.0.conv'
+    - 'head.cls.2.4'
+    - 'head.box.2.2'
+    - 'head.dfl.conv'
+  calibration:
+    act_bit: 10
+    weight_bit: 10
+  params:
+    distillation: False
+    distillation_loss: Symmetrical KL

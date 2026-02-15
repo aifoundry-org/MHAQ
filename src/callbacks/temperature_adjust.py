@@ -6,8 +6,8 @@ from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
 
-from src.quantization.gdnsq.gdnsq_quant import GDNSQQuant
-from src.quantization.gdnsq.utils import model_stats
+from src.quantization.rniq.rniq_quant import RNIQQuant
+from src.quantization.rniq.utils import model_stats
 
 logger = logging.getLogger("lightning.pytorch")
 
@@ -37,7 +37,7 @@ class TemperatureScale(Callback):
 
         self.total_batch += 1
                 
-        pl_module.log("temperature", self.t, prog_bar=True, sync_dist=True)
+        pl_module.log("temperature", self.t, prog_bar=True)
 
         self.t = (self.t + self.lr * self.scale_t) if self.total_batch > self.warmup else self.t
 

@@ -4,10 +4,10 @@ import src.models as compose_models
 import src.callbacks as compose_callbacks
 import src.quantization as compose_quantization
 from src.aux.types import QScheme, QMethod
-from src.quantization.gdnsq.config.config_schema import GDNSQQuantizerParams
+from src.quantization.rniq.config.config_schema import RNIQQuantizerParams
 
-from pydantic import BaseModel, field_validator, model_validator
-from typing import Any, Literal, Dict, Optional, List
+from pydantic import BaseModel, field_validator
+from typing import Literal, Dict, Optional, List
 
 
 class ModelConfig(BaseModel):
@@ -43,28 +43,15 @@ class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
-    qmethod: QMethod = QMethod.GDNSQ
-    qscheme: Optional[QScheme] = QScheme.PER_CHANNEL
+    qmethod: QMethod = QMethod.RNIQ
+    qscheme: Optional[QScheme] = QScheme.PER_TENSOR
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
-    fuse_batchnorm: Optional[bool] = False
-    quantize_bias: Optional[bool] = False
+    fuse_batchnorm: Optional[bool] = True
+    quantize_bias: Optional[bool] = True
     activation_zero_point: Optional[float] = 0.0
-    params: Optional[GDNSQQuantizerParams | Dict[str, Any]] = None
-
-    @model_validator(mode="after")
-    def validate_params(self):
-        if self.name == "GDNSQQuant":
-            if self.params is None:
-                self.params = GDNSQQuantizerParams()
-            elif isinstance(self.params, dict):
-                self.params = GDNSQQuantizerParams.model_validate(self.params)
-            elif not isinstance(self.params, GDNSQQuantizerParams):
-                raise TypeError(
-                    "Params for GDNSQQuant must be a mapping or GDNSQQuantizerParams."
-                )
-        return self
+    params: Optional[None | RNIQQuantizerParams] = None
 
 
 class DataConfig(BaseModel):
@@ -73,7 +60,6 @@ class DataConfig(BaseModel):
     num_workers: int
     augmentations: Optional[List[str]] = None
     data_dir: Optional[str] = "./data"
-    params: Optional[Dict] = []
 
 
 class ConfigSchema(BaseModel):

@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
-from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
-from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
+from src.quantization.rniq.layers.rniq_conv2d import NoisyConv2d
+from src.quantization.rniq.layers.rniq_linear import NoisyLinear
+from src.quantization.rniq.layers.rniq_act import NoisyAct
 
-from src.quantization.gdnsq.utils.model_stats import get_true_weights_width
-from src.quantization.gdnsq.utils.model_stats import get_true_activations_width
+from src.quantization.rniq.utils.model_stats import get_true_weights_width
+from src.quantization.rniq.utils.model_stats import get_true_activations_width
 from src.loggers import WandbLogger
 
 warnings.filterwarnings("ignore", category=FutureWarning)

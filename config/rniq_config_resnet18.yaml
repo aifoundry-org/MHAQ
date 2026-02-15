@@ -1,0 +1,60 @@
+model:
+  type: VISION_CLS
+  name: resnet18
+  cpt_url: "file://data/models/ilsvrc2012-resnet18_from_resnet34.pt"
+  params:
+    pretrained: False
+    num_classes: 1000
+
+training:
+  criterion: CrossEntropyLoss
+  optimizer: RAdam
+  learning_rate: 0.0005
+  max_epochs: 40
+  val_check_interval: 0.25
+  log_every_n_steps: 100
+  loggers:
+    WandbLogger:
+      params:
+        name: resnet18-rniq
+        note: "distilled 71.93"
+ 
+  callbacks:
+    ModelCheckpoint:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        filename: rniq_checkpoint-{epoch:02d}-"{Metric/ns_Accuracy_top1:.2f}"
+    TemperatureScale:
+      params:
+        scale_lr: 1
+        scale_anneal: 0.999
+        warmup: 1000
+    NoiseEarlyStopping:
+      params:
+        monitor: Metric/ns_Accuracy_top1
+        mode: max
+        patience: 5
+        min_delta: 0.001
+
+data:
+  dataset_name: IMAGENET
+  data_dir: ./data/imagenet
+  batch_size: 1000
+  num_workers: 8
+
+
+quantization:
+  name: RNIQQuant
+  qscheme: 1 # 0 for per-tensor, 1 for per-channel
+  act_bit: 4
+  weight_bit: 4
+  excluded_layers:
+    - 'conv1'
+    - 'fc'
+  calibration:
+    act_bit: 10
+    weight_bit: 10
+  params:
+    distillation: True
+    distillation_loss: Symmetrical KL

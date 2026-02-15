@@ -21,5 +21,5 @@ class QScheme(Enum):
     PER_CHANNEL = 1
 
 class QMethod(Enum):
-    GDNSQ = 0
+    RNIQ = 0
     
