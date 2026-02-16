@@ -5,6 +5,7 @@ from torch import nn
 from src.aux.types import QScheme
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
+from src.quantization.gdnsq.layers.gdnsq_embedding import NoisyEmbedding
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.aux.qutils import is_biased
 
@@ -58,7 +59,7 @@ class ModelHelper:
                 log_act_s.append(module.log_act_s)
 
         for name, module in model.named_modules():
-            if isinstance(module, (NoisyConv2d, NoisyLinear)): # TODO watch supported layers!
+            if isinstance(module, (NoisyConv2d, NoisyLinear, NoisyEmbedding)): # TODO watch supported layers!
                 collect_log_weights(module)
             elif isinstance(module, NoisyAct):
                 collect_log_activations(module)

@@ -192,6 +192,7 @@ class Quantizer:
         clamping it to the specified range.
         """
 
+        value = value.to(self.scale.device)
         # clamp is used only for activations
         # the clamp is before noise beacause adding rounding noise is equivalent to rounding clamp
         value = torch.clamp(value, min=self.min_val, max=self.max_val)

@@ -8,6 +8,8 @@ from src.models.cls.resnet.resnet_cifar import resnet20_cifar10_new
 from src.quantization.abc.abc_quant import BaseQuant
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
+from src.quantization.gdnsq.layers.gdnsq_embedding import NoisyEmbedding
+from src.quantization.gdnsq.layers.gdnsq_seq import NSequential
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.quantization.gdnsq.utils.model_helper import ModelHelper
 from src.quantization.gdnsq.gdnsq_loss import PotentialLoss, PotentialLossNoPred
@@ -37,6 +39,7 @@ class GDNSQQuant(BaseQuant):
         return {
             nn.Conv2d: NoisyConv2d,
             nn.Linear: NoisyLinear,
+            nn.Embedding: NoisyEmbedding
         }
 
     def get_loss(self, qmodel):
@@ -472,7 +475,8 @@ class GDNSQQuant(BaseQuant):
         #LINEAR            
         elif isinstance(module, nn.Linear):
             qmodule = self._quantize_module_linear(module)
-
+        elif isinstance(module, nn.Embedding):
+            qmodule = self._quantize_module_embedding(module)
         else:
             raise NotImplementedError(f"Module not supported {type(module)}")
 
@@ -487,7 +491,7 @@ class GDNSQQuant(BaseQuant):
 
     def _get_quantization_sequence(self, qmodule, signed_activations):
         disabled = self.config.quantization.act_bit == -1
-        sequence = nn.Sequential(
+        sequence = NSequential(
             OrderedDict(
                 [
                     (
@@ -526,6 +530,20 @@ class GDNSQQuant(BaseQuant):
             module.in_features,
             module.out_features,
             is_biased(module),
+            qscheme=self.qscheme,
+            log_s_init=-12,
+            qnmethod=self.qnmethod
+        )
+    
+    def _quantize_module_embedding(self, module: nn.Embedding):
+        return NoisyEmbedding(
+            module.num_embeddings,
+            module.embedding_dim,
+            module.padding_idx,
+            module.max_norm,
+            module.norm_type,
+            module.scale_grad_by_freq,
+            module.sparse,
             qscheme=self.qscheme,
             log_s_init=-12,
             qnmethod=self.qnmethod

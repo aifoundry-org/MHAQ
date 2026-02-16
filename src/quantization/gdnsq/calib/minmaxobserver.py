@@ -2,6 +2,7 @@ import torch
 
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
+from src.quantization.gdnsq.layers.gdnsq_embedding import NoisyEmbedding
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.loggers.default_logger import logger
 from src.aux.traverse import previous_leaf
@@ -70,7 +71,7 @@ def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channe
 
     for name, m in module.named_modules():
         # TODO: qscheme
-        if isinstance(m, (NoisyLinear, NoisyConv2d)):
+        if isinstance(m, (NoisyLinear, NoisyConv2d, NoisyEmbedding)):
             reduce_dims = tuple(range(1, m.weight.dim()))
             max_ = m.weight.detach().amax(reduce_dims, keepdim=True)
             min_ = m.weight.detach().amin(reduce_dims, keepdim=True)

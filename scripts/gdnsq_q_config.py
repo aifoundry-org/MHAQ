@@ -53,8 +53,8 @@ def main():
     logger.info("Validate model after layers replacement")
     validator.validate(qmodel, datamodule=data)
   
-    logger.info("Calibrating model initial weights and scales")
-    validator.calibrate(qmodel, datamodule=data)
+    # logger.info("Calibrating model initial weights and scales")
+    # validator.calibrate(qmodel, datamodule=data)
 
     # # Finetune model
     trainer.fit(qmodel, datamodule=data)

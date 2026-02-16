@@ -7,6 +7,7 @@ from src.loggers.default_logger import logger
 
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
+from src.quantization.gdnsq.layers.gdnsq_embedding import NoisyEmbedding
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 
 class ModelStats:
@@ -196,7 +197,7 @@ def get_true_activations_width(model: torch.nn.Module, max=True):
 
 def get_weights_bit_width_mean(model: torch.nn.Module):
     lin_layers = [
-        m for m in model.modules() if isinstance(m, (NoisyConv2d, NoisyLinear))
+        m for m in model.modules() if isinstance(m, (NoisyConv2d, NoisyLinear, NoisyEmbedding))
     ]
     bit_widths = []
     for module in lin_layers:
