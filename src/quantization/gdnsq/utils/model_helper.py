@@ -8,10 +8,18 @@ from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.aux.qutils import is_biased
 
+def iso_fro_loss(W: torch.Tensor, eps: float = 1e-8):
+    C_out = W.shape[0]
+    W2 = W.view(C_out, -1)
+    scale = (W2.norm(p='fro')**2 / max(C_out,1)).clamp_min(eps)
+    G = (W2 @ W2.t())
+    I = scale * torch.eye(C_out, device=W.device, dtype=W.dtype)
+    return ((G - I)**2).sum()
+
 class ModelHelper:
     @staticmethod
     def get_model_values(model: nn.Module, qscheme: QScheme = QScheme.PER_TENSOR):
-        log_b_s, log_wght_s, log_w_n_b, log_act_q, log_act_s = [], [], [], [], []
+        log_b_s, log_wght_s, log_w_n_b, log_act_q, log_act_s, balance = [], [], [], [], [], []
 
 
         # Helper to handle log_s and log_w_n_b collection
@@ -30,6 +38,9 @@ class ModelHelper:
                     # else:
                     #     min_b = torch.Tensor([0]).to(min.device)
                     #     max_b = torch.Tensor([0]).to(max.device)
+                    bal = iso_fro_loss(module.weight)
+                    balance.append(bal.ravel())
+
                 elif qscheme == QScheme.PER_TENSOR:
                     log_wght_s.append(module.log_wght_s)
                     # log_wght_s.append(module.log_b_s)
@@ -39,6 +50,8 @@ class ModelHelper:
                     # min_b = module.bias.amin()
                     # max_b = module.bias.amax()
 
+                    bal = iso_fro_loss(module.weight).mean()                    
+                    balance.append(bal)
 
                 # add 1 lsb gap to prevent overflow
                 log_w_n_b.append(torch.log2(max - min + torch.exp2(module.log_wght_s.ravel())))
@@ -63,14 +76,16 @@ class ModelHelper:
                 torch.stack(log_act_s).ravel(),
                 torch.stack(log_act_q).ravel(),
                 torch.stack(log_wght_s).ravel(),
-                torch.stack(log_w_n_b).ravel()
+                torch.stack(log_w_n_b).ravel(),
+                torch.stack(balance).ravel()
             )
         elif qscheme == QScheme.PER_CHANNEL:
             res = (
                 torch.cat(log_act_s),
                 torch.cat(log_act_q),
                 torch.cat(log_wght_s),
-                torch.cat(log_w_n_b)
+                torch.cat(log_w_n_b),
+                torch.cat(balance)
             )
 
         return res

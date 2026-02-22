@@ -45,6 +45,7 @@ class PotentialLoss(nn.Module):
         laq = output[2]  # log_act_q
         lws = output[3]  # log_wght_s
         lwq = output[4]  # log_w
+        bal = output[5]  # weight reg
 
         self.base_loss = self.criterion(prd, target)
         loss = self.base_loss
@@ -60,11 +61,13 @@ class PotentialLoss(nn.Module):
         aloss = aloss0.mean()
         aact = (aloss0 > 0).sum() # number of active constraints on activations
 
-        rloss = loss.pow_(self.p)
+        #rloss = loss.pow_(self.p)
 
         calib_mul = self.loss_sum / self.cnt
         wmul = (wact + self.l_eps) / (wact + aact + self.l_eps)
         amul = (aact + self.l_eps) / (wact + aact + self.l_eps)
+
+        rloss = (loss + 1e-6*wmul*bal.mean()).pow_(self.p)
 
         l1, l2 = (1.0, self.t) if self.lossless else (self.t, 1.0)
 
