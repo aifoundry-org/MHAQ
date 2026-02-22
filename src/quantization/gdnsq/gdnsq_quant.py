@@ -20,6 +20,7 @@ from src.aux.loss.distill_ce import CrossEntropyLoss
 from src.aux.loss.symm_kl_loss import SymmetricalKL
 from src.aux.loss.kl_loss import KL
 from src.aux.loss.jsdloss import JSDLoss
+from src.quantization.gdnsq.layers.gdnsq_mean_norm import MeanNorm1d, MeanNorm2d, MeanNorm3d
 
 from torch import nn
 from copy import deepcopy
@@ -158,30 +159,100 @@ class GDNSQQuant(BaseQuant):
                 module.weight.requires_grad = not freeze
                 module.bias.requires_grad = not freeze
 
+
     def fuse_conv_bn(self, model: nn.Module, conv_name: str, bn_name: str):
         conv = attrgetter(conv_name)(model)
-
-        W = conv.weight.clone()
-        if conv.bias is not None:
-            b = conv.bias.clone()
-        else:
-            b = torch.zeros(conv.out_channels, device=W.device)
-
         bn = attrgetter(bn_name)(model)
-        mu = bn.running_mean
-        var = bn.running_var
+
+        if not isinstance(bn, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+            raise TypeError(f"{bn_name} is not a BatchNorm layer: {type(bn)}")
+
+        if not bn.track_running_stats:
+            raise ValueError("BN must have track_running_stats=True")
+
+        # Conv params
+        W = conv.weight.detach().clone()
+        if conv.bias is not None:
+            b = conv.bias.detach().clone()
+        else:
+            b = torch.zeros(conv.out_channels, device=W.device, dtype=W.dtype)
+
+        # BN params/buffers
+        mu = bn.running_mean.detach()
+        var = bn.running_var.detach()
         eps = bn.eps
-        gamma = bn.weight
-        beta = bn.bias
+
+        if bn.affine:
+            gamma = bn.weight.detach()
+            beta = bn.bias.detach()
+        else:
+            gamma = torch.ones_like(mu)
+            beta = torch.zeros_like(mu)
 
         std = torch.sqrt(var + eps)
         scale = gamma / std
-        shape = [-1] + [1] * (W.dim() - 1)
+        shape = (-1,) + (1,) * (W.dim() - 1)
 
-        conv.weight.data = W * scale.view(shape)
-        conv.bias = nn.Parameter(beta + (b - mu) * scale)
+        # 1) Fuse only BN scale into conv (NOT BN beta)
+        #    z' = scale * (W*x + b)
+        with torch.no_grad():
+            conv.weight.copy_(W * scale.view(shape))
+            fused_conv_bias = scale * b
+            if conv.bias is None:
+                conv.bias = nn.Parameter(fused_conv_bias.clone())
+            else:
+                conv.bias.copy_(fused_conv_bias)
 
-        attrsetter(bn_name)(model, nn.Identity())  # Replacing bn module with Identity
+        # 2) MeanNorm subtracts scaled mean and keeps BN beta as its bias:
+        #    y = (z' - scale*mu) + beta
+        if isinstance(bn, nn.BatchNorm1d):
+            mean_norm = MeanNorm1d(
+                bn.num_features,
+                eps=bn.eps,
+                momentum=bn.momentum,
+                affine=True,                 # keep beta here
+                track_running_stats=True,
+                device=W.device,
+                dtype=W.dtype,
+            )
+        elif isinstance(bn, nn.BatchNorm2d):
+            mean_norm = MeanNorm2d(
+                bn.num_features,
+                eps=bn.eps,
+                momentum=bn.momentum,
+                affine=True,
+                track_running_stats=True,
+                device=W.device,
+                dtype=W.dtype,
+            )
+        else:  # BatchNorm3d
+            mean_norm = MeanNorm3d(
+                bn.num_features,
+                eps=bn.eps,
+                momentum=bn.momentum,
+                affine=True,
+                track_running_stats=True,
+                device=W.device,
+                dtype=W.dtype,
+            )
+
+        with torch.no_grad():
+            # MeanNorm subtracts this from fused conv output
+            mean_norm.running_mean.copy_(scale * mu)
+
+            # running_var is unused in MeanNorm, keep for compatibility
+            mean_norm.running_var.fill_(1.0)
+            mean_norm.num_batches_tracked.copy_(bn.num_batches_tracked)
+
+            # Keep BN beta in MeanNorm bias, set MeanNorm weight=1
+            mean_norm.weight.fill_(1.0)
+            mean_norm.bias.copy_(beta)
+
+            # Optional: freeze MeanNorm weight so it stays "bias-only affine"
+            mean_norm.weight.requires_grad_(False)
+
+        attrsetter(bn_name)(model, mean_norm)
+
 
     @staticmethod
     def noise_ratio(self, x=None):
