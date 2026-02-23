@@ -60,6 +60,6 @@ quantization:
     act_bit: 10
     weight_bit: 10
   params:
-    distillation: True
+    distillation: False
     distillation_loss: L1
     qnmethod: AEWGS

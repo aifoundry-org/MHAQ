@@ -17,6 +17,7 @@ class LVisionSR(pl.LightningModule):
         self.criterion = setup["criterion"]
         self.optimizer = setup["optimizer"]
         self.lr = setup["lr"]
+        self.save_preds = False
 
         config = setup.get("config")
         self.denormalize = config.data.params.get("denormalize", False)
@@ -183,31 +184,33 @@ class LVisionSR(pl.LightningModule):
         )
         return loss
 
+
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
         inputs = pred_batch[0] if isinstance(
             pred_batch, (tuple, list)) else pred_batch
-        output = self.forward(inputs).clamp(0, 1)
-        torchvision.utils.save_image(output, os.path.join(
-            self.predict_dataset_path, f"{batch_idx}.png"))
-        # return self.forward(inputs).clamp(0,1)
+        return self.forward(inputs).clamp(0,1)
+
 
     def on_predict_start(self) -> None:
-        self.logger_path = os.path.join(
-            self.trainer.logger.save_dir, self.trainer.logger.name, self.trainer.logger.version)
-        self.predict_path = os.path.join(self.logger_path, "predicted")
-        self.dataset_index_mapping = list(
-            self.trainer.predict_dataloaders.keys())
-        os.makedirs(self.predict_path, exist_ok=True)
+        if self.save_preds:
+            self.logger_path = os.path.join(
+                self.trainer.logger.save_dir, self.trainer.logger.name, self.trainer.logger.version)
+            self.predict_path = os.path.join(self.logger_path, "predicted")
+            self.dataset_index_mapping = list(
+                self.trainer.predict_dataloaders.keys())
+            os.makedirs(self.predict_path, exist_ok=True)
         return super().on_predict_start()
 
     def on_predict_batch_start(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
-        self.predict_dataset_path = os.path.join(
-            self.predict_path, f"{self.dataset_index_mapping[dataloader_idx]}")
-        os.makedirs(self.predict_dataset_path, exist_ok=True)
+        if self.save_preds:
+            self.predict_dataset_path = os.path.join(
+                self.predict_path, f"{self.dataset_index_mapping[dataloader_idx]}")
+            os.makedirs(self.predict_dataset_path, exist_ok=True)
         return super().on_predict_batch_start(batch, batch_idx, dataloader_idx)
 
     def on_predict_end(self) -> None:
-        logger.warning(f"\nPredictions saved at {self.predict_path}")
+        if self.save_preds:
+            logger.warning(f"\nPredictions saved at {self.predict_path}")
         return super().on_predict_end()
 
     def on_validation_epoch_start(self) -> None:
