@@ -17,7 +17,7 @@ class LVisionSR(pl.LightningModule):
         self.criterion = setup["criterion"]
         self.optimizer = setup["optimizer"]
         self.lr = setup["lr"]
-        self.save_preds = False
+        self.save_preds = True
 
         config = setup.get("config")
         self.denormalize = config.data.params.get("denormalize", False)
@@ -184,12 +184,10 @@ class LVisionSR(pl.LightningModule):
         )
         return loss
 
-
     def predict_step(self, pred_batch, batch_idx, dataloader_idx=0):
         inputs = pred_batch[0] if isinstance(
             pred_batch, (tuple, list)) else pred_batch
-        return self.forward(inputs).clamp(0,1)
-
+        return self.forward(inputs).clamp(0, 1)
 
     def on_predict_start(self) -> None:
         if self.save_preds:
@@ -207,6 +205,11 @@ class LVisionSR(pl.LightningModule):
                 self.predict_path, f"{self.dataset_index_mapping[dataloader_idx]}")
             os.makedirs(self.predict_dataset_path, exist_ok=True)
         return super().on_predict_batch_start(batch, batch_idx, dataloader_idx)
+
+    def on_predict_batch_end(self, outputs: Any | None, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
+        torchvision.utils.save_image(outputs, os.path.join(
+            self.predict_dataset_path, f"{batch_idx}.png"))
+        return super().on_predict_batch_end(outputs, batch, batch_idx, dataloader_idx)
 
     def on_predict_end(self) -> None:
         if self.save_preds:
