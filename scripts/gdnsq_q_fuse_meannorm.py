@@ -174,6 +174,9 @@ def main():
     n_fused = fuse_meannorm_into_conv_bias_and_remove(qmodel)
     logger.info("Fused %d MeanNorm(s) into previous NoisyConv2d bias and removed from graph.", n_fused)
 
+    root = qmodel.model if hasattr(qmodel, "model") else qmodel
+    logger.info("Model (after fusion):\n%s", root)
+
     logger.info("Running validation on fused model")
     validator.validate(qmodel, datamodule=data)
 
