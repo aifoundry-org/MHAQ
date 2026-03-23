@@ -49,10 +49,36 @@ class QNSTE(QNoise):
             # STE
             grad_input = grad_output * 0
 
+        # ber 3
         if ctx.needs_input_grad[1]:
-            # correct scaling accoring to https://arxiv.org/abs/2508.14004
+            # correct scaling according to https://arxiv.org/abs/2508.14004
             r = torch.randint_like(input, 2).sub_(0.5)
             grad_scale = (3.0**-0.5) * grad_output * r
+
+        # ber 1
+        # if ctx.needs_input_grad[1]:
+        #     r = torch.randint_like(input, 2).sub_(0.5)
+        #     grad_scale = grad_output * r
+
+        # norm 3
+        # if ctx.needs_input_grad[1]:
+        #     noise = torch.randn_like(input)
+        #     grad_scale = (3.0 ** -0.5) * grad_output * noise * 0.5
+
+        # norm 1
+        # if ctx.needs_input_grad[1]:
+        #     noise = torch.randn_like(input)
+        #     grad_scale = grad_output * noise * 0.5
+
+        # rounding
+        # if ctx.needs_input_grad[1]:
+        #     e = torch.round(input) - input
+        #     grad_scale = grad_output * e
+
+        # uniform
+        # if ctx.needs_input_grad[1]:
+        #    noise = torch.rand_like(input).sub_(0.5)
+        #    grad_scale = grad_output * noise
 
         return grad_input, grad_scale
 
