@@ -3,7 +3,7 @@ from torch import nn, inf
 
 from src.aux.types import QScheme
 from src.quantization.gdnsq.gdnsq import Quantizer
-from src.quantization.gdnsq.gdnsq_utils import QNMethod
+from src.quantization.gdnsq.gdnsq_utils import QNMethod, GradNoiseType
 
 
 class NoisyAct(nn.Module):
@@ -15,6 +15,7 @@ class NoisyAct(nn.Module):
         noise_ratio=1,
         disable=False,        
         qnmethod: QNMethod = QNMethod.STE,
+        grad_noise: GradNoiseType = GradNoiseType.BER3,
     ) -> None:
         super().__init__()
         self.disable = disable
@@ -32,7 +33,7 @@ class NoisyAct(nn.Module):
 
         self.log_act_s = torch.nn.Parameter(self._log_act_s, requires_grad=True)
         self.Q = Quantizer(
-            self, torch.exp2(self._log_act_s), 0, -inf, inf, qnmethod=qnmethod
+            self, torch.exp2(self._log_act_s), 0, -inf, inf, qnmethod=qnmethod, grad_noise=grad_noise
         )
         self.bw = torch.tensor(0.0)
 

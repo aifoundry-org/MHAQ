@@ -187,8 +187,11 @@ class LVisionSR(pl.LightningModule):
         inputs = pred_batch[0] if isinstance(
             pred_batch, (tuple, list)) else pred_batch
         output = self.forward(inputs).clamp(0, 1)
-        torchvision.utils.save_image(output, os.path.join(
-            self.predict_dataset_path, f"{batch_idx}.png"))
+        # Save to disk only when called via trainer.predict() (predict_dataset_path is set)
+        if hasattr(self, "predict_dataset_path"):
+            torchvision.utils.save_image(output, os.path.join(
+                self.predict_dataset_path, f"{batch_idx}.png"))
+        return output
         # return self.forward(inputs).clamp(0,1)
 
     def on_predict_start(self) -> None:

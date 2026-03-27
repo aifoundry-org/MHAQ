@@ -7,4 +7,5 @@ class GDNSQQuantizerParams(BaseModel):
     distillation_loss: Optional[str] = "Cross-Entropy"
     distillation_teacher: Optional[str] = None
     qnmethod: str = "STE"
+    grad_noise: str = "BER3"
 

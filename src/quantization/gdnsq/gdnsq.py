@@ -5,13 +5,14 @@ from torch import Tensor
 from torch.autograd import Function
 import torch.distributed as dist
 
-from src.quantization.gdnsq.gdnsq_utils import QMode, QNMethod
+from src.quantization.gdnsq.utils.scale_helper import compute_grad_scale
+from src.quantization.gdnsq.gdnsq_utils import QMode, QNMethod, GradNoiseType
 
 
 class QNoise(Function):
     # Note that forward, setup_context, and backward are @staticmethods
     @staticmethod
-    def forward(input, scale):
+    def forward(input, scale, grad_noise_type: GradNoiseType):
         output = torch.round(input) - input
         return output
 
@@ -19,8 +20,9 @@ class QNoise(Function):
     # inputs is a Tuple of all of the inputs passed to forward.
     # output is the output of the forward().
     def setup_context(ctx, inputs, output):
-        input, scale = inputs
+        input, scale, grad_noise_type = inputs
         ctx.save_for_backward(input, scale)
+        ctx.grad_noise_type = grad_noise_type
 
     @staticmethod
     def backward(ctx, grad_output: Tensor):
@@ -49,38 +51,10 @@ class QNSTE(QNoise):
             # STE
             grad_input = grad_output * 0
 
-        # ber 3
         if ctx.needs_input_grad[1]:
-            # correct scaling according to https://arxiv.org/abs/2508.14004
-            r = torch.randint_like(input, 2).sub_(0.5)
-            grad_scale = (3.0**-0.5) * grad_output * r
+            grad_scale = compute_grad_scale(ctx.grad_noise_type, input, grad_output)
 
-        # ber 1
-        # if ctx.needs_input_grad[1]:
-        #     r = torch.randint_like(input, 2).sub_(0.5)
-        #     grad_scale = grad_output * r
-
-        # norm 3
-        # if ctx.needs_input_grad[1]:
-        #     noise = torch.randn_like(input)
-        #     grad_scale = (3.0 ** -0.5) * grad_output * noise * 0.5
-
-        # norm 1
-        # if ctx.needs_input_grad[1]:
-        #     noise = torch.randn_like(input)
-        #     grad_scale = grad_output * noise * 0.5
-
-        # rounding
-        # if ctx.needs_input_grad[1]:
-        #     e = torch.round(input) - input
-        #     grad_scale = grad_output * e
-
-        # uniform
-        # if ctx.needs_input_grad[1]:
-        #    noise = torch.rand_like(input).sub_(0.5)
-        #    grad_scale = grad_output * noise
-
-        return grad_input, grad_scale
+        return grad_input, grad_scale, None  # None for grad_noise_type arg
 
 
 class QNLSQ(QNoise):
@@ -104,10 +78,9 @@ class QNLSQ(QNoise):
             grad_input = grad_output * 0
 
         if ctx.needs_input_grad[1]:
-            r = torch.round(input) - input
-            grad_scale = grad_output * r
+            grad_scale = compute_grad_scale(ctx.grad_noise_type, input, grad_output)
 
-        return grad_input, grad_scale
+        return grad_input, grad_scale, None  # None for grad_noise_type arg
 
 
 class QNEWGS(QNoise):
@@ -125,12 +98,10 @@ class QNEWGS(QNoise):
             delta = 1e-2
             grad_input = -torch.abs(grad_output) * e * delta
 
-        if ctx.need_input_grad[1]:
-            # correct scaling accoring to https://arxiv.org/abs/2508.14004
-            r = torch.randint_like(input, 2).sub_(0.5)
-            grad_scale = (3.0**-0.5) * grad_output * r
+        if ctx.needs_input_grad[1]:
+            grad_scale = compute_grad_scale(ctx.grad_noise_type, input, grad_output)
 
-        return grad_input, grad_scale
+        return grad_input, grad_scale, None  # None for grad_noise_type arg
 
 
 class QNAEWGS(QNoise):
@@ -165,12 +136,11 @@ class QNAEWGS(QNoise):
             g_scale = (m * delta * num_full).clamp_max(1-gap) 
             
             grad_input = -grad_output * g_scale
+        
         if ctx.needs_input_grad[1]:
-            # correct scaling accoring to https://arxiv.org/abs/2508.14004
-            r = torch.randint_like(input, 2).sub_(0.5)
-            grad_scale = (3.0**-0.5) * grad_output * r
+            grad_scale = compute_grad_scale(ctx.grad_noise_type, input, grad_output)
 
-        return grad_input, grad_scale
+        return grad_input, grad_scale, None  # None for grad_noise_type arg
 
 
 def reduce_to_shape(t: Tensor, like: Tensor) -> Tensor:
@@ -191,7 +161,8 @@ class Quantizer:
         min_val: torch.Tensor,
         max_val: torch.Tensor,
         rnoise_ratio: torch.Tensor=torch.Tensor([-1.0,]),
-        qnmethod: QNMethod=QNMethod.STE
+        qnmethod: QNMethod=QNMethod.STE,
+        grad_noise: GradNoiseType=GradNoiseType.BER3,
     ) -> None:
         """
         Main quantizer for gdnsq method.
@@ -202,6 +173,8 @@ class Quantizer:
             min_val (float): _description_
             max_val (float): _description_
             rnoise_ratio (float): _description_
+            grad_noise (GradNoiseType): _description_
+
         """
         self.module = module
         self.scale = scale
@@ -211,6 +184,7 @@ class Quantizer:
         self.rnoise_ratio = torch.Tensor([rnoise_ratio])
         self.positive_scale = torch.all(torch.as_tensor(self.scale) > 0).item()
         self.qnmethod = qnmethod
+        self.grad_noise = grad_noise
 
     def quantize(self, value):
         """
@@ -256,12 +230,12 @@ class Quantizer:
 
     def _get_rnoise(self, value: Tensor, scale: Tensor):
         if self.qnmethod == QNMethod.STE:
-            return QNSTE.apply(value, scale)
+            return QNSTE.apply(value, scale, self.grad_noise)
         elif self.qnmethod == QNMethod.EWGS:
-            return QNEWGS.apply(value, scale)
+            return QNEWGS.apply(value, scale, self.grad_noise)
         elif self.qnmethod == QNMethod.AEWGS:
-            return QNAEWGS.apply(value, scale)
+            return QNAEWGS.apply(value, scale, self.grad_noise)
         elif self.qnmethod == QNMethod.LSQ:
-            return QNLSQ.apply(value, scale)
+            return QNLSQ.apply(value, scale, self.grad_noise)
         else:
             raise AttributeError(f"Unknown method {self.qnmethod}!")

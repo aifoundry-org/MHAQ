@@ -11,7 +11,7 @@ from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
 from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.quantization.gdnsq.utils.model_helper import ModelHelper
 from src.quantization.gdnsq.gdnsq_loss import PotentialLoss, PotentialLossNoPred
-from src.quantization.gdnsq.gdnsq_utils import QNMethod
+from src.quantization.gdnsq.gdnsq_utils import QNMethod, GradNoiseType
 from src.quantization.gdnsq.utils import model_stats
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
@@ -482,6 +482,7 @@ class GDNSQQuant(BaseQuant):
 
     def _quantize_module(self, module, signed_activations):
         self.qnmethod = QNMethod[self.quant_config.params.qnmethod]
+        self.grad_noise = GradNoiseType[self.quant_config.params.grad_noise]
         if isinstance(module, nn.Conv2d):
             qmodule = self._quantize_module_conv2d(module)
         elif isinstance(module, nn.Linear):
@@ -508,6 +509,7 @@ class GDNSQQuant(BaseQuant):
                         NoisyAct(
                             signed=signed_activations,
                             disable=disabled,
+                            grad_noise=self.grad_noise,
                         ),
                     ),
                     ("0", qmodule),
@@ -531,7 +533,8 @@ class GDNSQQuant(BaseQuant):
             qscheme=self.qscheme,
             log_s_init=-12,
             quant_bias=self.quant_bias,
-            qnmethod=self.qnmethod
+            qnmethod=self.qnmethod,
+            grad_noise=self.grad_noise,
         )
 
     def _quantize_module_linear(self, module: nn.Linear):
@@ -541,5 +544,6 @@ class GDNSQQuant(BaseQuant):
             is_biased(module),
             qscheme=self.qscheme,
             log_s_init=-12,
-            qnmethod=self.qnmethod
+            qnmethod=self.qnmethod,
+            grad_noise=self.grad_noise,
         )

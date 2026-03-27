@@ -30,11 +30,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-
-def main():
-    args = parse_args()
-
-    config = load_and_validate_config(args.config)
+def run(config):
     dataset_composer = DatasetComposer(config=config)
     model_composer = ModelComposer(config=config)
     quantizer = Quantizer(config=config)()
@@ -63,6 +59,12 @@ def main():
     validator.test(qmodel, datamodule=data, ckpt_path="best")
 
     validator.predict(qmodel, datamodule=data, ckpt_path="best")
+
+
+def main():
+    args = parse_args()
+    config = load_and_validate_config(args.config)
+    run(config)
 
 if __name__ == "__main__":
     main()

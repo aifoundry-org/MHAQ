@@ -3,19 +3,54 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-CONFIGS=(
-  "experiments/resnet20_cifar10/configs/conf_lr_0_002.yaml"
+
+LR_CONF=(
+    0.02
+    0.01
+    0.002
 )
 
+GRAD_NOISE_CONF=(
+    "BER3"
+    "BER1"
+    "NORM3"
+    "NORM1"
+    "UNIFORM"
+    "ROUNDING"
+)
+
+CONFIGS=(
+    "experiments/rfdn_sr/config.yaml"
+    "experiments/resnet20_cifar10/config.yaml"
+    "experiments/resnet20_cifar100/config.yaml"
+)
+
+RUNS_PER_PAIR=5
+
+
 for cfg in "${CONFIGS[@]}"; do
-  echo "============================================================"
-  echo "Running: ${cfg}"
-  echo "============================================================"
+    model_dir="$(dirname "${cfg}")"
+    logs_folder="${model_dir}/logs"
 
-  cfg_name=$(basename "$cfg" .yaml)
-  python -m scripts.gdnsq_q_config --config "$cfg" > "experiments/${cfg_name}.log" 2>&1
+    echo "============================================================"
+    echo "Config : ${cfg}"
+    echo "Logs   : ${logs_folder}"
+    echo "============================================================"
 
-  echo "Done: ${cfg}"
+    for grad_noise in "${GRAD_NOISE_CONF[@]}"; do
+        for lr in "${LR_CONF[@]}"; do
+            for run_idx in $(seq 1 "${RUNS_PER_PAIR}"); do
+                echo "  [run ${run_idx}/${RUNS_PER_PAIR}] grad_noise=${grad_noise}  lr=${lr}"
+                python -m scripts.gdnsq_q_config_v2 \
+                    --config        "${cfg}" \
+                    --grad-noise    "${grad_noise}" \
+                    --lr            "${lr}" \
+                    --mitrics-folder "${logs_folder}"
+            done
+        done
+    done
+
+    echo "Done: ${cfg}"
 done
 
 echo "All runs finished."

@@ -26,7 +26,7 @@ class Logger(BaseModel):
 class TrainingConfig(BaseModel):
     criterion: str | List[str]
     optimizer: str
-    learning_rate: float
+    learning_rate: float = None  # may be overridden via CLI --lr
     max_epochs: int
     val_every_n_epochs: Optional[int] = 1
     val_check_interval: Optional[float] = None

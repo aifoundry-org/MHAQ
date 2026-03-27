@@ -5,7 +5,7 @@ from torch import nn, inf
 
 from src.aux.types import QScheme
 from src.quantization.gdnsq.gdnsq import Quantizer
-from src.quantization.gdnsq.gdnsq_utils import QNMethod
+from src.quantization.gdnsq.gdnsq_utils import QNMethod, GradNoiseType
 
 from src.aux.qutils import attrsetter, is_biased
 
@@ -29,6 +29,7 @@ class NoisyConv2d(nn.Conv2d):
         rand_noise: bool = False,
         quant_bias: bool = False,
         qnmethod: QNMethod = QNMethod.AEWGS,
+        grad_noise: GradNoiseType = GradNoiseType.BER3,
     ) -> None:
         super().__init__(
             in_channels,
@@ -59,13 +60,13 @@ class NoisyConv2d(nn.Conv2d):
             )
         self._noise_ratio = torch.nn.Parameter(torch.Tensor([1]), requires_grad=False)
         self.Q = Quantizer(
-            self, torch.exp2(self.log_wght_s), 0, -inf, inf, qnmethod=qnmethod
+            self, torch.exp2(self.log_wght_s), 0, -inf, inf, qnmethod=qnmethod, grad_noise=grad_noise
         )
         self.rand_noise = rand_noise
         self.quant_bias = quant_bias
         if self.quant_bias:
             self.Q_b = Quantizer(
-                self, torch.exp2(self.log_b_s), 0, -inf, inf, qnmethod=qnmethod
+                self, torch.exp2(self.log_b_s), 0, -inf, inf, qnmethod=qnmethod, grad_noise=grad_noise
             )
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:

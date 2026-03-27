@@ -6,7 +6,7 @@ from torch import nn, inf
 
 from src.aux.types import QScheme
 from src.quantization.gdnsq.gdnsq import Quantizer
-from src.quantization.gdnsq.gdnsq_utils import QNMethod
+from src.quantization.gdnsq.gdnsq_utils import QNMethod, GradNoiseType
 from src.aux.qutils import is_biased
 
 
@@ -22,6 +22,7 @@ class NoisyLinear(nn.Linear):
         log_s_init: float = -12,
         rand_noise: bool = False,
         qnmethod: QNMethod = QNMethod.STE,
+        grad_noise: GradNoiseType = GradNoiseType.BER3,
     ) -> None:
         super().__init__(in_features, out_features, bias, device, dtype)
         self.qscheme = qscheme
@@ -44,7 +45,7 @@ class NoisyLinear(nn.Linear):
             requires_grad=False,
         )
         self.Q = Quantizer(
-            self, torch.exp2(self.log_wght_s), 0, -inf, inf, qnmethod=qnmethod
+            self, torch.exp2(self.log_wght_s), 0, -inf, inf, qnmethod=qnmethod, grad_noise=grad_noise
         )
 
         if self.qscheme == QScheme.PER_TENSOR:

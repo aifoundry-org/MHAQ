@@ -235,7 +235,6 @@ class PrintSrMetrics(Callback):
             return
         self._did_dump_keys = True
         keys = sorted([str(k) for k in cbs.keys()])
-        self._write("# callback_metrics keys:\n# " + "\n# ".join(keys))
 
     @override
     def on_validation_epoch_end(self, trainer, pl_module):
