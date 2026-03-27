@@ -1,0 +1,25 @@
+     0 | base=nan | val=0.236715 | acc1=nan | Wμ=nan | Aμ=nan | Wmax=nan | Amax=nan |LR=nan | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     0 | base=nan | val=0.236732 | acc1=0.9282 | Wμ=11.186 | Aμ=20.000 | Wmax=12.916 | Amax=13.744 |LR=nan | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     0 | base=nan | val=0.236786 | acc1=0.9281 | Wμ=9.786 | Aμ=20.000 | Wmax=10.000 | Amax=13.743 |LR=nan | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     0 | base=nan | val=0.236878 | acc1=0.9281 | Wμ=9.786 | Aμ=10.000 | Wmax=10.000 | Amax=9.994 |LR=nan | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+# epoch | BaseLoss | ValLoss | Acc@1 | MeanWBits | MeanABits | MaxWBits | MaxABits | LR | GradNorm | WSat | ASat | NoiseMean | NoiseVar | NoiseCorr | Temp | EpochTime(s)
+     0 | base=nan | val=0.213726 | acc1=0.9335 | Wμ=9.786 | Aμ=10.000 | Wmax=10.000 | Amax=10.000 |LR=nan | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     1 | base=0.005712 | val=0.239266 | acc1=0.9255 | Wμ=9.786 | Aμ=10.006 | Wmax=10.017 | Amax=9.994 |LR=0.00198 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     3 | base=0.039247 | val=0.258719 | acc1=0.9186 | Wμ=9.795 | Aμ=10.025 | Wmax=10.112 | Amax=10.012 |LR=0.00398 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     5 | base=0.104069 | val=0.311597 | acc1=0.9063 | Wμ=9.844 | Aμ=10.053 | Wmax=10.275 | Amax=10.081 |LR=0.00598 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     7 | base=0.189949 | val=0.351691 | acc1=0.8908 | Wμ=9.925 | Aμ=10.076 | Wmax=10.549 | Amax=10.141 |LR=0.00798 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+     9 | base=0.225454 | val=0.385948 | acc1=0.8784 | Wμ=10.045 | Aμ=10.030 | Wmax=11.165 | Amax=10.195 |LR=0.00998 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    11 | base=0.302092 | val=0.477623 | acc1=0.8590 | Wμ=10.173 | Aμ=10.016 | Wmax=11.280 | Amax=10.293 |LR=0.01198 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    13 | base=0.294055 | val=0.501614 | acc1=0.8453 | Wμ=10.314 | Aμ=10.070 | Wmax=11.280 | Amax=10.415 |LR=0.01398 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    15 | base=0.285668 | val=0.377610 | acc1=0.8814 | Wμ=10.459 | Aμ=10.025 | Wmax=11.443 | Amax=10.428 |LR=0.01598 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    17 | base=0.311460 | val=0.401376 | acc1=0.8706 | Wμ=10.589 | Aμ=10.155 | Wmax=11.722 | Amax=10.583 |LR=0.01798 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    19 | base=0.263716 | val=0.385456 | acc1=0.8789 | Wμ=10.720 | Aμ=10.205 | Wmax=11.979 | Amax=10.578 |LR=0.01998 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    21 | base=0.289419 | val=0.485892 | acc1=0.8554 | Wμ=4.334 | Aμ=4.932 | Wmax=5.555 | Amax=6.358 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    23 | base=1.030910 | val=1.958923 | acc1=0.5379 | Wμ=1.440 | Aμ=4.065 | Wmax=3.170 | Amax=5.358 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    25 | base=0.989686 | val=1.152695 | acc1=0.6565 | Wμ=1.105 | Aμ=2.709 | Wmax=2.322 | Amax=3.459 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    27 | base=1.291922 | val=1.980263 | acc1=0.4584 | Wμ=1.019 | Aμ=1.866 | Wmax=2.000 | Amax=2.322 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    29 | base=1.312348 | val=1.689996 | acc1=0.5344 | Wμ=0.999 | Aμ=1.426 | Wmax=2.000 | Amax=2.000 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    31 | base=1.342114 | val=1.012566 | acc1=0.6710 | Wμ=0.984 | Aμ=1.193 | Wmax=1.585 | Amax=1.585 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    33 | base=1.526374 | val=1.646904 | acc1=0.5886 | Wμ=0.973 | Aμ=1.136 | Wmax=1.000 | Amax=1.585 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    35 | base=1.423962 | val=1.111561 | acc1=0.6610 | Wμ=0.968 | Aμ=1.014 | Wmax=1.000 | Amax=1.000 |LR=0.02 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
+    37 | base=1.483185 | val=0.938682 | acc1=0.6997 | Wμ=0.965 | Aμ=0.983 | Wmax=1.000 | Amax=1.000 |LR=0.017238 | ‖g‖=nan | satA=nan | satW=nan | εμ=nan | εvar=nan | corr(ε,x)=nan | t=nans
