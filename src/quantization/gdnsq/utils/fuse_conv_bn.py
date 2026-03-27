@@ -104,6 +104,68 @@ def _optimize_binary_weights_sparse(
         "changed_count": int(apply_mask.sum().item()),
     }
 
+
+def _compute_bn_fold_diagnostics(
+    weight: torch.Tensor,
+    reference_weight: torch.Tensor,
+    new_scale: torch.Tensor,
+    new_zero_point: torch.Tensor,
+    bn_scale: torch.Tensor,
+    fused_weight: torch.Tensor,
+    fused_scale: torch.Tensor,
+    fused_zero_point: torch.Tensor,
+    min_margin: float,
+):
+    shape = [-1] + [1] * (weight.dim() - 1)
+    bn_scale_view = bn_scale.view(shape)
+    reference_weight = reference_weight.to(fused_weight.device)
+
+    unfused_binary = _binary_dequantize(
+        weight,
+        new_scale,
+        new_zero_point,
+    ).to(fused_weight.device)
+    folded_reference = reference_weight * bn_scale_view
+    folded_from_unfused_binary = unfused_binary * bn_scale_view
+    folded_binary = _binary_dequantize(
+        fused_weight,
+        fused_scale,
+        fused_zero_point,
+    )
+
+    unfused_mask = (weight.to(new_zero_point.device) > new_zero_point).to(fused_weight.device)
+    folded_mask = (fused_weight.to(fused_zero_point.device) > fused_zero_point).to(fused_weight.device)
+    folded_margin = (fused_weight.to(fused_zero_point.device) - fused_zero_point).abs()
+
+    return {
+        "bn_scale_min": bn_scale.amin().item(),
+        "bn_scale_max": bn_scale.amax().item(),
+        "bn_scale_mean": bn_scale.mean().item(),
+        "negative_bn_scale_channels": int((bn_scale < 0).sum().item()),
+        "negative_bn_scale_channel_indices": (
+            torch.nonzero(bn_scale < 0, as_tuple=False).reshape(-1).detach().cpu().tolist()
+        ),
+        "negative_bn_scale_fraction": (bn_scale < 0).float().mean().item(),
+        "unfused_binary_mean_abs_diff": (
+            reference_weight - unfused_binary
+        ).abs().mean().item(),
+        "folded_binary_mean_abs_diff": (
+            folded_reference.to(folded_binary.device) - folded_binary
+        ).abs().mean().item(),
+        "folded_from_unfused_binary_mean_abs_diff": (
+            folded_reference.to(folded_from_unfused_binary.device) - folded_from_unfused_binary
+        ).abs().mean().item(),
+        "folding_binary_drift_mean_abs": (
+            folded_binary.to(folded_from_unfused_binary.device) - folded_from_unfused_binary
+        ).abs().mean().item(),
+        "binary_assignment_flip_fraction": (
+            unfused_mask != folded_mask
+        ).float().mean().item(),
+        "near_threshold_fraction": (
+            folded_margin <= _channel_margin(fused_weight, fused_zero_point, min_margin)
+        ).float().mean().item(),
+    }
+
 def fuse_conv_bn(model: nn.Module, conv_name: str, bn_name: str):
     conv = attrgetter(conv_name)(model)
 
@@ -156,6 +218,7 @@ def fuse_conv_bn_q(model: nn.Module, conv_name: str, bn_name: str):
 
     std = torch.sqrt(var + eps)
     bn_scale = gamma / std
+    bn_scale_abs = bn_scale.abs()
 
     conv.scale = new_scale
     conv.zero_point = new_zero_point
@@ -172,7 +235,7 @@ def fuse_conv_bn_q(model: nn.Module, conv_name: str, bn_name: str):
     # conv.bias = nn.Parameter(beta + (b - mu) * bn_scale)
     # new_zero_point *= bn_scale.view(
         # new_zero_point.shape).to(new_zero_point.device)
-    # new_scale *= bn_scale.view(new_scale.shape).to(new_zero_point.device)
+    # new_scale *= bn_scale_abs.view(new_scale.shape).to(new_zero_point.device)
 
     rnoise_ratio = float(torch.as_tensor(
         prev_q.rnoise_ratio).reshape(-1)[0])
@@ -223,6 +286,7 @@ def fuse_conv_bn_q_optimized(
     delta_limit: float | None = 1e-6,
     min_margin: float = 1e-7,
     max_candidates: int | None = 1024,
+    collect_diagnostics: bool = True,
 ):
     conv = attrgetter(conv_name)(model)
     prev_q = conv.Q
@@ -244,6 +308,7 @@ def fuse_conv_bn_q_optimized(
 
     std = torch.sqrt(var + eps)
     bn_scale = gamma / std
+    bn_scale_abs = bn_scale.abs()
     bn_scale_view = bn_scale.view(shape)
 
     new_zero_point = prev_q.zero_point + prev_q.scale.mul(0.5)
@@ -257,7 +322,7 @@ def fuse_conv_bn_q_optimized(
     fused_weight = W * bn_scale_view
     fused_bias = beta + (b - mu) * bn_scale
     fused_zero_point = _fold_bn_param(new_zero_point, bn_scale, out_channels)
-    fused_scale = _fold_bn_param(new_scale, bn_scale, out_channels)
+    fused_scale = _fold_bn_param(new_scale, bn_scale_abs, out_channels)
 
     rnoise_ratio = float(torch.as_tensor(prev_q.rnoise_ratio).reshape(-1)[0])
     reference_q = Quantizer(
@@ -314,6 +379,21 @@ def fuse_conv_bn_q_optimized(
         error = reference_weight.to(optimized_binary.device) - optimized_binary
         mean_diff = error.mean().item()
         mean_abs_diff = error.abs().mean().item()
+        diagnostics = {}
+        if collect_diagnostics:
+            diagnostics = _compute_bn_fold_diagnostics(
+                weight=W.to(new_zero_point.device),
+                reference_weight=reference_q.dequantize(
+                    reference_q.quantize(W.to(prev_q.scale.device))
+                ),
+                new_scale=new_scale,
+                new_zero_point=new_zero_point,
+                bn_scale=bn_scale,
+                fused_weight=fused_weight,
+                fused_scale=fused_scale,
+                fused_zero_point=fused_zero_point,
+                min_margin=min_margin,
+            )
 
     conv.scale = fused_scale
     conv.zero_point = fused_zero_point
@@ -332,6 +412,7 @@ def fuse_conv_bn_q_optimized(
     conv.binary_quantizer_weight_deltas = weight_deltas.detach().cpu()
     conv.binary_quantizer_weight_mean_diff = mean_diff
     conv.binary_quantizer_weight_mean_abs_diff = mean_abs_diff
+    conv.binary_quantizer_bn_fold_diagnostics = diagnostics
 
     attrsetter(bn_name)(model, nn.Identity())
     return {
@@ -343,4 +424,5 @@ def fuse_conv_bn_q_optimized(
         "channel_mean_abs_diffs": channel_mean_abs_diffs,
         "channel_margins": channel_margins,
         "changed_weights": changed_count,
+        "bn_diagnostics": diagnostics,
     }

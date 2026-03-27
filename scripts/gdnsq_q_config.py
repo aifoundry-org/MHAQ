@@ -17,6 +17,29 @@ from src.loggers.default_logger import logger
 
 torch.set_float32_matmul_precision('high')
 
+
+def print_bn_fold_diagnostics(stats_by_layer: dict) -> None:
+    if not stats_by_layer:
+        return
+
+    suspicious_layers = sorted(
+        stats_by_layer.items(),
+        key=lambda item: item[1].get("bn_diagnostics", {}).get("folding_binary_drift_mean_abs", 0.0),
+        reverse=True,
+    )
+
+    print("Top BN-folding suspects:")
+    for layer, stats in suspicious_layers[:10]:
+        diag = stats.get("bn_diagnostics", {})
+        print(
+            f"{layer}: "
+            f"mean_abs_diff={stats.get('mean_abs_diff', 0.0):.6e}, "
+            f"fold_drift={diag.get('folding_binary_drift_mean_abs', 0.0):.6e}, "
+            f"flip_frac={diag.get('binary_assignment_flip_fraction', 0.0):.6e}, "
+            f"neg_bn_frac={diag.get('negative_bn_scale_fraction', 0.0):.6e}, "
+            f"near_thr={diag.get('near_threshold_fraction', 0.0):.6e}"
+        )
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
     parser.add_argument(
@@ -51,8 +74,9 @@ def main():
     qmodel = quantizer.quantize(model, in_place=True)
 
     # qmodel.strict_loading = False
-    qmodel.load_state_dict(torch.load("logs/MHAQ/c86fef_2026-03-01_21_49/checkpoints/gdnsq_checkpoint-459-0.5783.ckpt")['state_dict'], strict=False)
+    # qmodel.load_state_dict(torch.load("logs/MHAQ/c86fef_2026-03-01_21_49/checkpoints/gdnsq_checkpoint-459-0.5783.ckpt")['state_dict'], strict=False)
     # qmodel.load_state_dict(torch.load("logs/MHAQ/8c8abb_2026-03-07_22_36/checkpoints/gdnsq_checkpoint-639-0.5629.ckpt")['state_dict'], strict=False)
+    qmodel.load_state_dict(torch.load("logs/MHAQ/08d1e1_2026-03-15_12_27/checkpoints/gdnsq_checkpoint-889-0.5860.ckpt")['state_dict'], strict=False)
 
     logger.info("Validate model after layers replacement")
     validator.validate(qmodel, datamodule=data)
@@ -73,8 +97,21 @@ def main():
     # fuse
     quantizer.fuse_conv_bn(qmodel)
     print(qmodel.binary_quantizer_weight_mean_diffs)
-    print(f"SUM of mean_abs_diff {sum([qmodel.binary_quantizer_weight_mean_diffs[l]["mean_abs_diff"] for l in qmodel.binary_quantizer_weight_mean_diffs])}")
-    print(f"SUM of mean_diff {sum([qmodel.binary_quantizer_weight_mean_diffs[l]["mean_diff"] for l in qmodel.binary_quantizer_weight_mean_diffs])}")
+    print(
+        "SUM of mean_abs_diff",
+        sum(
+            stats["mean_abs_diff"]
+            for stats in qmodel.binary_quantizer_weight_mean_diffs.values()
+        ),
+    )
+    print(
+        "SUM of mean_diff",
+        sum(
+            stats["mean_diff"]
+            for stats in qmodel.binary_quantizer_weight_mean_diffs.values()
+        ),
+    )
+    print_bn_fold_diagnostics(qmodel.binary_quantizer_weight_mean_diffs)
 
     logger.info("Validate after fusing")
     validator.validate(qmodel, datamodule=data)
