@@ -208,7 +208,7 @@ class Quantizer:
         value = value + noise
 
         #assert valid values
-        if not self.module.training:
+        if not self.module.training and not torch.compiler.is_compiling() and not torch.jit.is_tracing():
             if torch.any(value < torch.floor((self.min_val - self.zero_point) / self.scale)):
                 raise AssertionError("Not all elements in the tensor above min val")
             if torch.any(value > torch.ceil((self.max_val - self.zero_point) / self.scale)):
