@@ -1,17 +1,12 @@
-import os, sys
+import argparse
+import os
+import resource
+import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-
-import torch
+import numpy as np
 import onnx
 import onnxruntime as ort
-import numpy as np
-import argparse
-import resource
-
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
-
+import torch
 from torch.onnx import register_custom_op_symbolic
 from tqdm import tqdm
 
@@ -22,7 +17,36 @@ from src.quantization.quantizer import Quantizer
 from src.training.trainer import Trainer, Validator
 from src.loggers.default_logger import logger
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(PROJECT_ROOT)
+os.chdir(PROJECT_ROOT)
+
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
+
 torch.set_float32_matmul_precision('high')
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=False,
+        help="Path to the configuration file (YAML).",
+        # default="config/gdnsq_config_resnet20_cifar100_ste_w1a1.yaml"
+        # default="config/gdnsq_config_resnet20_old.yaml"
+        default="config/gdnsq_config_resnet20_new.yaml"
+    )
+    parser.add_argument(
+        "--ckpt",
+        type=str,
+        required=False,
+        help="Path to resume/load checkpoint",
+        default=None
+    )
+    return parser.parse_args()
+
 
 class ONNXPipeline:
     def __init__(self, qmodel, datamodule, onnx_file_path):
@@ -37,7 +61,9 @@ class ONNXPipeline:
         dummy_input = torch.randn(1, 3, 32, 32, dtype=torch.float32)
 
         def custom_exp2_symbolic(g, x):
-            two = g.op("Constant", value_t=torch.tensor(2.0, dtype=torch.float32))
+            two = g.op(
+                "Constant", value_t=torch.tensor(2.0, dtype=torch.float32)
+            )
             return g.op("Pow", two, x)
 
         register_custom_op_symbolic('aten::exp2', custom_exp2_symbolic, 15)
@@ -52,9 +78,12 @@ class ONNXPipeline:
             input_names=['input'],
             output_names=['output'],
             dynamo=False,
-            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'}
+            }
         )
-            
+
         return self
 
     def verify(self):
@@ -63,7 +92,7 @@ class ONNXPipeline:
 
         self.qmodel.eval()
         self.qmodel.cpu()
-        
+
         torch.manual_seed(42)
         dummy_input = torch.randn(1, 3, 32, 32, dtype=torch.float32)
 
@@ -72,12 +101,15 @@ class ONNXPipeline:
 
         ort_session = ort.InferenceSession(self.onnx_file_path)
         input_name = ort_session.get_inputs()[0].name
-        ort_output = ort_session.run(None, {input_name: dummy_input.numpy()})[0]
+        ort_output = ort_session.run(
+            None, {input_name: dummy_input.numpy()}
+        )[0]
 
         t_flat, o_flat = torch_output.flatten(), ort_output.flatten()
-        cos_sim = np.dot(t_flat, o_flat) / (np.linalg.norm(t_flat) * np.linalg.norm(o_flat))
-        max_diff = np.max(np.abs(t_flat - o_flat))
-        
+        cos_sim = np.dot(t_flat, o_flat) / (
+            np.linalg.norm(t_flat) * np.linalg.norm(o_flat)
+        )
+
         torch_pred = np.argmax(torch_output, axis=1)[0]
         ort_pred = np.argmax(ort_output, axis=1)[0]
 
@@ -92,12 +124,14 @@ class ONNXPipeline:
                 print("WARNING: Predictions differ.")
             if cos_sim <= 0.99:
                 print("WARNING: Cosine similarity is low.")
-            
+
         return self
 
     def validate(self):
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        ort_session = ort.InferenceSession(self.onnx_file_path, providers=providers)
+        ort_session = ort.InferenceSession(
+            self.onnx_file_path, providers=providers
+        )
         input_name = ort_session.get_inputs()[0].name
 
         self.datamodule.setup(stage="fit")
@@ -115,17 +149,6 @@ class ONNXPipeline:
 
         accuracy = (correct / total) * 100
         return accuracy
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Run GDNSQ quantization.")
-    parser.add_argument("--config", type=str, required=False, help="Path to the configuration file (YAML).",
-        # default="config/gdnsq_config_resnet20_cifar100_ste_w1a1.yaml"
-        # default="config/gdnsq_config_resnet20_old.yaml"
-        default="config/gdnsq_config_resnet20_new.yaml"
-    )
-    parser.add_argument("--ckpt", type=str, required=False, help="Path to resume/load checkpoint", default=None)
-    return parser.parse_args()
 
 
 def main():
@@ -148,19 +171,22 @@ def main():
 
     logger.info("Validate model after layers replacement")
     validator.validate(qmodel, datamodule=data)
-  
+
     logger.info("Calibrating model initial weights and scales")
     validator.calibrate(qmodel, datamodule=data)
 
     qmodel.train()
     trainer.fit(qmodel, datamodule=data, ckpt_path=args.ckpt)
 
-    pipeline = ONNXPipeline(qmodel=qmodel, 
-        datamodule=data, 
-        onnx_file_path="resnet20_cifar10_w32a32.onnx")
-    
+    pipeline = ONNXPipeline(
+        qmodel=qmodel,
+        datamodule=data,
+        onnx_file_path="resnet20_cifar10_w32a32.onnx"
+    )
+
     onnx_accuracy = pipeline.export().verify().validate()
     print(f"\nONNX Accuracy: {round(onnx_accuracy, 2):.2f}%")
+
 
 if __name__ == "__main__":
     main()
