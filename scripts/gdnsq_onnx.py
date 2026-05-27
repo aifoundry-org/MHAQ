@@ -10,19 +10,19 @@ import torch
 from torch.onnx import register_custom_op_symbolic
 from tqdm import tqdm
 
-from src.config.config_loader import load_and_validate_config
-from src.data.compose.composer import DatasetComposer
-from src.models.compose.composer import ModelComposer
-from src.quantization.quantizer import Quantizer
-from src.training.trainer import Trainer, Validator
-from src.loggers.default_logger import logger
-
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(PROJECT_ROOT)
 os.chdir(PROJECT_ROOT)
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
+
+from src.config.config_loader import load_and_validate_config
+from src.data.compose.composer import DatasetComposer
+from src.models.compose.composer import ModelComposer
+from src.quantization.quantizer import Quantizer
+from src.training.trainer import Trainer, Validator
+from src.loggers.default_logger import logger
 
 torch.set_float32_matmul_precision('high')
 
@@ -178,10 +178,12 @@ def main():
     qmodel.train()
     trainer.fit(qmodel, datamodule=data, ckpt_path=args.ckpt)
 
+    validator.validate(qmodel, datamodule=data)
+
     pipeline = ONNXPipeline(
         qmodel=qmodel,
         datamodule=data,
-        onnx_file_path="resnet20_cifar10_w32a32.onnx"
+        onnx_file_path="resnet20_cifar10_w1a1.onnx"
     )
 
     onnx_accuracy = pipeline.export().verify().validate()
