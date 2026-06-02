@@ -242,6 +242,32 @@ class Trainer(pl.Trainer):
             model, dataloaders, ckpt_path, verbose, datamodule, weights_only
         )
 
+    @rank_zero_only
+    def export(
+        self,
+        model: pl.LightningModule,
+        datamodule: pl.LightningDataModule,
+        onnx_file_path: str,
+        use_simplifier: bool = False
+    ):
+        from src.aux.onnx_pipeline import ONNXPipeline
+
+        log.info(f"Starting ONNX export pipeline for {onnx_file_path}...")
+
+        pipeline = ONNXPipeline(
+            qmodel=model,
+            datamodule=datamodule,
+            onnx_file_path=onnx_file_path
+        )
+
+        onnx_accuracy = (
+            pipeline.export(use_simplifier=use_simplifier)
+            .verify()
+            .validate()
+        )
+
+        return onnx_accuracy
+
     def _get_model_checkpoint_callback(self) -> PLModelCheckpoint:
         checkpoint_callback = next(
             (cb for cb in self.callbacks if isinstance(cb, PLModelCheckpoint)),
