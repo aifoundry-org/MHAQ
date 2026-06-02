@@ -4,9 +4,9 @@ import numpy as np
 from src.aux.types import QScheme
 from src.loggers.default_logger import logger
 
+from src.quantization.gdnsq.layers.gdnsq_act_lin import NoisyActLin
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 
 # from src.quantization.gdnsq.gdnsq import Quantizer
 
@@ -153,8 +153,9 @@ def get_layer_wnb_bit_width(
         # min_b = layer_bias.amin()
         # max_b = layer_bias.amax()
     elif config == QScheme.PER_CHANNEL:
-        min = layer_weights.amin((1, 2, 3))
-        max = layer_weights.amax((1, 2, 3))
+        reduce_dims = tuple(range(1, layer_weights.dim()))
+        min = layer_weights.amin(reduce_dims)
+        max = layer_weights.amax(reduce_dims)
 
         # min_b = layer_bias.amin()
         # max_b = layer_bias.amax()
@@ -170,7 +171,7 @@ def get_layer_wnb_bit_width(
 
 def get_activations_bit_width_mean(model: torch.nn.Module):
     noisy_layers = [
-        module for module in model.modules() if isinstance(module, NoisyAct)
+        module for module in model.modules() if isinstance(module, NoisyActLin)
     ]
     return torch.stack(
         [
@@ -196,10 +197,10 @@ def get_true_weights_width(model: torch.nn.Module, max=True):
     return np.max(bit_widths) if max else np.mean(bit_widths)
 
 
-# it's a hack to store activations bit widths inside NoisyAct module
-# in this function we just collect them
+# Activation bit widths are cached on fused quantized affine layers.
+# This helper only aggregates those cached values.
 def get_true_activations_width(model: torch.nn.Module, max=True):
-    act_modules = [m for m in model.modules() if isinstance(m, (NoisyAct))]
+    act_modules = [m for m in model.modules() if isinstance(m, NoisyActLin)]
     bit_widths = []
     for module in act_modules:
         bit_widths.append(module.bw.cpu())

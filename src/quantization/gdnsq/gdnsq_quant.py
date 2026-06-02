@@ -1,18 +1,18 @@
 import lightning.pytorch as pl
 import torch.nn.functional as F
+import torchmetrics.detection
 import torchmetrics
 import torch
-import torchmetrics.detection
 
 from src.models.cls.resnet.resnet_cifar import resnet20_cifar10_new
 from src.quantization.abc.abc_quant import BaseQuant
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 from src.quantization.gdnsq.utils.model_helper import ModelHelper
-from src.quantization.gdnsq.gdnsq_loss import PotentialLoss, PotentialLossNoPred
+from src.quantization.gdnsq.gdnsq_loss import PotentialLoss
 from src.quantization.gdnsq.gdnsq_utils import QNMethod
 from src.quantization.gdnsq.utils import model_stats
+from src.quantization.gdnsq.utils.fuse_conv_bn import fuse_batchnorm_and_normalize_activation_scales
 from src.aux.qutils import attrsetter, is_biased
 from src.aux.loss.hellinger import HellingerLoss
 from src.aux.loss.symm_ce_loss import SymmetricalCrossEntropyLoss
@@ -24,7 +24,6 @@ from src.aux.loss.jsdloss import JSDLoss
 from torch import nn
 from copy import deepcopy
 from operator import attrgetter
-from collections import OrderedDict
 
 
 class GDNSQQuant(BaseQuant):
@@ -67,6 +66,7 @@ class GDNSQQuant(BaseQuant):
 
     def quantize(self, lmodel: pl.LightningModule, in_place=False):
         self.fusebn = self.config.quantization.fuse_batchnorm
+        curriculum = self.config.quantization.params.curriculum
         if self.config.quantization.params.distillation:
             if not self.config.quantization.params.distillation_teacher:
                 tmodel = deepcopy(lmodel).eval()
@@ -82,26 +82,19 @@ class GDNSQQuant(BaseQuant):
         )
 
         # The part where original LModule structure gets changed
-        qmodel._noise_ratio = torch.tensor(1.0)
         qmodel.qscheme = self.qscheme
 
         if self.config.quantization.params.distillation:
             qmodel.tmodel = tmodel.requires_grad_(False)
-            qmodel.wrapped_criterion = PotentialLoss(
-                criterion=self.get_loss(qmodel=qmodel),
-                p=1,
-                a=self.act_bit,
-                w=self.weight_bit,
-            )
-        else:
-            qmodel.wrapped_criterion = PotentialLossNoPred(
-                criterion=self.get_loss(qmodel=qmodel),
-                p=1,
-                a=self.act_bit,
-                w=self.weight_bit,
-            )
-
-        qmodel.noise_ratio = GDNSQQuant.noise_ratio.__get__(qmodel, type(qmodel))
+        qmodel.wrapped_criterion = PotentialLoss(
+            criterion=self.get_loss(qmodel=qmodel),
+            p=1,
+            a=self.act_bit,
+            w=self.weight_bit,
+            curriculum_enable=curriculum.enable,
+            curriculum_mean=curriculum.mean,
+            curriculum_std=curriculum.std,
+        )
 
         # Important step. Replacing training and validation steps
         # with alternated ones.
@@ -121,22 +114,14 @@ class GDNSQQuant(BaseQuant):
 
         # Replacing layers directly
         qlayers = self._get_layers(lmodel.model, exclude_layers=self.excluded_layers)
+        skip_1x1 = self.quant_config.params.skip_1x1_conv
         for layer in qlayers.keys():
             module = attrgetter(layer)(lmodel.model)
-            if module.kernel_size != (1, 1):
+            if (not skip_1x1) or module.kernel_size != (1, 1):
                 # print(layer + " " + repr(module.kernel_size))
-                preceding_layer_type = layer_types[layer_names.index(layer) - 1]
-                following_layer_type = layer_types[layer_names.index(layer) + 1]
-                if issubclass(following_layer_type, nn.BatchNorm2d) and self.fusebn:
-                    self.fuse_conv_bn(
-                        qmodel.model, layer, layer_names[layer_names.index(layer) + 1]
-                    )
-                if issubclass(
-                    preceding_layer_type, (nn.ReLU)
-                ):  # XXX: hack shoul be changed through config
-                    qmodule = self._quantize_module(module, signed_activations=False)
-                else:
-                    qmodule = self._quantize_module(module, signed_activations=True)
+                # preceding_layer_type = layer_types[layer_names.index(layer) - 1]
+                # following_layer_type = layer_types[layer_names.index(layer) + 1]
+                qmodule = self._quantize_module(module)
 
                 attrsetter(layer)(qmodel.model, qmodule)
 
@@ -158,38 +143,14 @@ class GDNSQQuant(BaseQuant):
                 module.weight.requires_grad = not freeze
                 module.bias.requires_grad = not freeze
 
-    def fuse_conv_bn(self, model: nn.Module, conv_name: str, bn_name: str):
-        conv = attrgetter(conv_name)(model)
+    def fuse_conv_bn(self, model: nn.Module):
+        if torch.cuda.is_available():
+            model = model.cuda()
+        n_fused_batchnorm = fuse_batchnorm_and_normalize_activation_scales(model)
+        model.validation_step = type(model).validation_step.__get__(model, type(model))
 
-        W = conv.weight.clone()
-        if conv.bias is not None:
-            b = conv.bias.clone()
-        else:
-            b = torch.zeros(conv.out_channels, device=W.device)
+        return n_fused_batchnorm
 
-        bn = attrgetter(bn_name)(model)
-        mu = bn.running_mean
-        var = bn.running_var
-        eps = bn.eps
-        gamma = bn.weight
-        beta = bn.bias
-
-        std = torch.sqrt(var + eps)
-        scale = gamma / std
-        shape = [-1] + [1] * (W.dim() - 1)
-
-        conv.weight.data = W * scale.view(shape)
-        conv.bias = nn.Parameter(beta + (b - mu) * scale)
-
-        attrsetter(bn_name)(model, nn.Identity())  # Replacing bn module with Identity
-
-    @staticmethod
-    def noise_ratio(self, x=None):
-        if x != None:
-            for module in self.modules():
-                if hasattr(module, "_noise_ratio"):
-                    module._noise_ratio.data = x.clone().detach()
-        return self._noise_ratio
 
     @staticmethod
     def noisy_train_decorator(train_step):
@@ -249,10 +210,20 @@ class GDNSQQuant(BaseQuant):
                         metric_name = metric[0]
                     else:
                         metric_name = metric
-                    self.log(f"Metric/ns_{metric_name}", 
-                             metric_value * model_stats.is_converged(self), 
-                             prog_bar=False,
-                             sync_dist=True)
+                    # Log both gated (`ns_`) and raw metrics.
+                    converged = model_stats.is_converged(self)
+                    self.log(
+                        f"Metric/{metric_name}",
+                        metric_value,
+                        prog_bar=False,
+                        sync_dist=True,
+                    )
+                    self.log(
+                        f"Metric/ns_{metric_name}",
+                        metric_value * converged,
+                        prog_bar=False,
+                        sync_dist=True,
+                    )
 
 
             self.log("Loss/Validation loss", loss, prog_bar=False, sync_dist=True)
@@ -386,7 +357,6 @@ class GDNSQQuant(BaseQuant):
         inputs, targets = val_batch
 
         # targets = self.tmodel(inputs)
-        # self.noise_ratio(0.0)
         outputs = GDNSQQuant.noisy_step(self, inputs)
 
         # Oh, I hate this, but here we goo
@@ -461,7 +431,6 @@ class GDNSQQuant(BaseQuant):
     @staticmethod
     def noisy_test_step(self, test_batch, test_index):
         inputs, targets = test_batch
-        # self.noise_ratio(0.0)
         outputs = GDNSQQuant.noisy_step(self, inputs)
 
         test_loss = self.criterion(outputs[0], targets)
@@ -476,16 +445,26 @@ class GDNSQQuant(BaseQuant):
             self.quant_config = self.config.quantization
             self.act_bit = self.quant_config.act_bit
             self.weight_bit = self.quant_config.weight_bit
+            self.weight_guard_bit = self.quant_config.weight_guard_bit
+            self.act_guard_bit = self.quant_config.act_guard_bit
             self.excluded_layers = self.quant_config.excluded_layers
             self.qscheme = self.quant_config.qscheme
-            self.quant_bias = self.quant_config.quantize_bias
+            # Bias quantization has been removed; always disable it.
+            self.quant_bias = False
 
-    def _quantize_module(self, module, signed_activations):
+    def _quantize_module(self, module):
         self.qnmethod = QNMethod[self.quant_config.params.qnmethod]
+        disable_activations = self.config.quantization.act_bit == -1
         if isinstance(module, nn.Conv2d):
-            qmodule = self._quantize_module_conv2d(module)
+            qmodule = self._quantize_module_conv2d(
+                module,
+                disable_activations=disable_activations,
+            )
         elif isinstance(module, nn.Linear):
-            qmodule = self._quantize_module_linear(module)
+            qmodule = self._quantize_module_linear(
+                module,
+                disable_activations=disable_activations,
+            )
         else:
             raise NotImplementedError(f"Module not supported {type(module)}")
 
@@ -494,30 +473,17 @@ class GDNSQQuant(BaseQuant):
         if is_biased(module):
             qmodule.bias = module.bias
 
-        qmodule = self._get_quantization_sequence(qmodule, signed_activations)
-
         return qmodule
 
-    def _get_quantization_sequence(self, qmodule, signed_activations):
-        disabled = self.config.quantization.act_bit == -1
-        sequence = nn.Sequential(
-            OrderedDict(
-                [
-                    (
-                        "activations_quantizer",
-                        NoisyAct(
-                            signed=signed_activations,
-                            disable=disabled,
-                        ),
-                    ),
-                    ("0", qmodule),
-                ]
-            )
-        )
+    def _get_quantization_sequence(self, qmodule):
+        return qmodule
 
-        return sequence
-
-    def _quantize_module_conv2d(self, module: nn.Conv2d):
+    def _quantize_module_conv2d(
+        self,
+        module: nn.Conv2d,
+        *,
+        disable_activations: bool,
+    ):
         return NoisyConv2d(
             module.in_channels,
             module.out_channels,
@@ -531,15 +497,26 @@ class GDNSQQuant(BaseQuant):
             qscheme=self.qscheme,
             log_s_init=-12,
             quant_bias=self.quant_bias,
-            qnmethod=self.qnmethod
+            disable=disable_activations,
+            qnmethod=self.qnmethod,
+            weight_guard_bit=self.weight_guard_bit,
+            act_guard_bit=self.act_guard_bit,
         )
 
-    def _quantize_module_linear(self, module: nn.Linear):
+    def _quantize_module_linear(
+        self,
+        module: nn.Linear,
+        *,
+        disable_activations: bool,
+    ):
         return NoisyLinear(
             module.in_features,
             module.out_features,
             is_biased(module),
             qscheme=self.qscheme,
             log_s_init=-12,
-            qnmethod=self.qnmethod
+            disable=disable_activations,
+            qnmethod=self.qnmethod,
+            weight_guard_bit=self.weight_guard_bit,
+            act_guard_bit=self.act_guard_bit,
         )

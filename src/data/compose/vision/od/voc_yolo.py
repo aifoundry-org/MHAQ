@@ -159,6 +159,10 @@ class YOLOVOCDataModule(pl.LightningDataModule):
             shuffle=self.shuffle,
         )
 
+    def predict_dataloader(self):
+        # Reuse the test dataloader for prediction.
+        return self.test_dataloader()
+
 class YOLOVOCDataModule2012(YOLOVOCDataModule):
     def __init__(self, data_dir = "./data", batch_size=1000, num_workers=5):
         super().__init__(data_dir, batch_size, num_workers)

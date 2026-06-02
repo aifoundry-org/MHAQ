@@ -191,8 +191,15 @@ class LVisionSR(pl.LightningModule):
 
     def on_predict_start(self) -> None:
         if self.save_preds:
+            # Lightning loggers sometimes use non-string fields (e.g. `version` as int).
+            # `os.path.join` requires str/pathlike components.
+            if self.trainer.logger is None:
+                raise RuntimeError("save_preds=True but trainer.logger is None")
             self.logger_path = os.path.join(
-                self.trainer.logger.save_dir, self.trainer.logger.name, self.trainer.logger.version)
+                str(self.trainer.logger.save_dir),
+                str(self.trainer.logger.name),
+                str(self.trainer.logger.version),
+            )
             self.predict_path = os.path.join(self.logger_path, "predicted")
             self.dataset_index_mapping = list(
                 self.trainer.predict_dataloaders.keys())

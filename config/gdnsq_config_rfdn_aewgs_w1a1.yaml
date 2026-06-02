@@ -49,7 +49,6 @@ data:
 
 quantization:
   name: GDNSQQuant
-  quantize_bias: False
   qscheme: 1 # 0 for per-tensor, 1 for per-channel
   act_bit: 1
   weight_bit: 1

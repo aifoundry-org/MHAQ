@@ -3,10 +3,9 @@ import torch
 from torch import nn
 
 from src.aux.types import QScheme
+from src.quantization.gdnsq.layers.gdnsq_act_lin import NoisyActLin
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
-from src.aux.qutils import is_biased
 
 class ModelHelper:
     @staticmethod
@@ -20,30 +19,13 @@ class ModelHelper:
                 # add 0.5 bit gap to prevent overflow
                 if qscheme == QScheme.PER_CHANNEL:
                     log_wght_s.append(module.log_wght_s.ravel())
-                    # log_wght_s.append(module.log_b_s)
-                    min = module.weight.amin((1,2,3))
-                    max = module.weight.amax((1,2,3))
-
-                    # if is_biased(module):
-                    #     min_b = module.bias.amin()
-                    #     max_b = module.bias.amax()
-                    # else:
-                    #     min_b = torch.Tensor([0]).to(min.device)
-                    #     max_b = torch.Tensor([0]).to(max.device)
+                    min, max = module.get_weight_minmax()
                 elif qscheme == QScheme.PER_TENSOR:
                     log_wght_s.append(module.log_wght_s)
-                    # log_wght_s.append(module.log_b_s)
-                    min = module.weight.amin()
-                    max = module.weight.amax()
-
-                    # min_b = module.bias.amin()
-                    # max_b = module.bias.amax()
-
+                    min, max = module.get_weight_minmax()
 
                 # add 1 lsb gap to prevent overflow
                 log_w_n_b.append(torch.log2(max - min + torch.exp2(module.log_wght_s.ravel())))
-                # log_w_n_b.append(torch.log2(max_b - min_b + torch.exp2(module.log_b_s)))
-                    
 
         # Helper to handle log_act_q and log_act_s collection
         def collect_log_activations(module):
@@ -52,10 +34,10 @@ class ModelHelper:
                 log_act_s.append(module.log_act_s)
 
         for name, module in model.named_modules():
+            if isinstance(module, NoisyActLin):
+                collect_log_activations(module)
             if isinstance(module, (NoisyConv2d, NoisyLinear)): # TODO watch supported layers!
                 collect_log_weights(module)
-            elif isinstance(module, NoisyAct):
-                collect_log_activations(module)
 
         # Stack or concatenate the results based on the quantization scheme
         if qscheme == QScheme.PER_TENSOR:

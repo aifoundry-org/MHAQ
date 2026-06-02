@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 from lightning.pytorch.callbacks.callback import Callback
 from lightning.pytorch import Trainer, LightningModule
 
+from src.quantization.gdnsq.layers.gdnsq_act_lin import NoisyActLin
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
 
 from src.quantization.gdnsq.utils.model_stats import get_true_weights_width
 from src.quantization.gdnsq.utils.model_stats import get_true_activations_width
@@ -29,9 +29,9 @@ class LayersWidthVis(Callback):
         
         for (name, module) in pl_module.model.named_modules():
             if isinstance(module, (NoisyConv2d, NoisyLinear)):
-                data.append((name, get_true_weights_width(module)))
-            elif isinstance(module, NoisyAct):
-                data.append((name, get_true_activations_width(module)))
+                data.append((f"{name}.weight", get_true_weights_width(module)))
+            if isinstance(module, NoisyActLin):
+                data.append((f"{name}.act", get_true_activations_width(module)))
             
         color_map = {True: "red", False: "blue"}
         
@@ -39,7 +39,7 @@ class LayersWidthVis(Callback):
         fig_width = 10  # Set a fixed width
         fig, ax = plt.subplots()#figsize=(fig_width, fig_height))
         df = pd.DataFrame(data=data, columns=["Name", "Value"])      
-        df["act"] = df["Name"].str.contains("activations_quantizer", case=False)
+        df["act"] = df["Name"].str.endswith(".act")
         
         palette = df["act"].map(color_map)
         

@@ -31,8 +31,8 @@ def transform_coco_targets(coco_targets):
         n = t['labels'].size(0)
         idx.append(torch.full((n,), i))
         cls.append(t['labels'].view(-1,1).float())
-        xy  = (t['boxes'][:,:2] + t['boxes'][:,2:]) / 2   # → (N,2): x_center,y_center
-        wh  = t['boxes'][:,2:] - t['boxes'][:,:2]        # → (N,2): w,h
+        xy  = (t['boxes'][:,:2] + t['boxes'][:,2:]) / 2   # -> (N,2): x_center,y_center
+        wh  = t['boxes'][:,2:] - t['boxes'][:,:2]        # -> (N,2): w,h
         box = torch.cat((xy, wh), dim=1) 
         # box.append(t['boxes'][:,2:]-t['boxes'][:,:2])
     return {'idx':torch.cat(idx), 'cls':torch.cat(cls), 'box':box}
@@ -121,7 +121,7 @@ class COCODataModule(pl.LightningDataModule):
     
     def collate_fn(self, batch):
         images, targets = zip(*batch)
-        images = torch.stack(images, dim=0)           # assumes equal H×W
+        images = torch.stack(images, dim=0)           # assumes equal HxW
 
         out = []
         for idx, t in enumerate(targets):
@@ -172,3 +172,7 @@ class COCODataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
         )
+
+    def predict_dataloader(self):
+        # Reuse the validation dataloader for prediction.
+        return self.val_dataloader()

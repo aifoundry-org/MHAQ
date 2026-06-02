@@ -2,7 +2,7 @@ import torch
 
 from src.quantization.gdnsq.layers.gdnsq_conv2d import NoisyConv2d
 from src.quantization.gdnsq.layers.gdnsq_linear import NoisyLinear
-from src.quantization.gdnsq.layers.gdnsq_act import NoisyAct
+from src.quantization.gdnsq.layers.gdnsq_act_lin import NoisyActLin
 from src.loggers.default_logger import logger
 from src.aux.traverse import previous_leaf
 import numpy as np
@@ -39,7 +39,7 @@ class MinMaxObserver(ObserverHook):
 def apply_mean_stats_activations(module, abits=8, max_bits = 24):    
     for name, m in module.named_modules():
 
-        if isinstance(m, NoisyAct):
+        if isinstance(m, NoisyActLin):
             min = m.min_values.min()
             max = m.max_values.max()
 
@@ -48,22 +48,36 @@ def apply_mean_stats_activations(module, abits=8, max_bits = 24):
             m.min_values = torch.Tensor([])
             m.max_values = torch.Tensor([])
 
-            if not m.log_act_q.requires_grad and not m.log_act_s.requires_grad:
-                abits = max_bits
-
             if max - min > 0:
                 # not zero width
                 log_s = torch.log2((max - min) / (2**abits - 1))
                 log_q = log_s + abits
-
-                m.act_b = torch.nn.Parameter(torch.tensor([min]), requires_grad=m.act_b.requires_grad)
-                m.log_act_q = torch.nn.Parameter(torch.tensor([log_q]), requires_grad=m.log_act_q.requires_grad)
-                m.log_act_s = torch.nn.Parameter(torch.tensor([log_s]), requires_grad=m.log_act_s.requires_grad)
+                m.act_b = torch.nn.Parameter(
+                    torch.tensor([min], device=m.act_b.device, dtype=m.act_b.dtype),
+                    requires_grad=m.act_b.requires_grad,
+                )
+                m.log_act_q = torch.nn.Parameter(
+                    torch.tensor([log_q], device=m.log_act_q.device, dtype=m.log_act_q.dtype),
+                    requires_grad=m.log_act_q.requires_grad,
+                )
+                m.log_act_s = torch.nn.Parameter(
+                    torch.tensor([log_s], device=m.log_act_s.device, dtype=m.log_act_s.dtype),
+                    requires_grad=m.log_act_s.requires_grad,
+                )
             else:
                 # pruned 
-                m.log_act_q = torch.nn.Parameter(torch.tensor([0]), requires_grad=False)
-                m.log_act_s = torch.nn.Parameter(torch.tensor([0]), requires_grad=False)
-                m.act_b = torch.nn.Parameter(torch.tensor([min]), requires_grad=False)
+                m.log_act_q = torch.nn.Parameter(
+                    torch.tensor([0.0], device=m.log_act_q.device, dtype=m.log_act_q.dtype),
+                    requires_grad=m.log_act_q.requires_grad,
+                )
+                m.log_act_s = torch.nn.Parameter(
+                    torch.tensor([0.0], device=m.log_act_s.device, dtype=m.log_act_s.dtype),
+                    requires_grad=m.log_act_s.requires_grad,
+                )
+                m.act_b = torch.nn.Parameter(
+                    torch.tensor([min], device=m.act_b.device, dtype=m.act_b.dtype),
+                    requires_grad=m.act_b.requires_grad,
+                )
 
 
 def apply_quantile_weights_s(module, wbits=8, max_bits = 24, qscheme="per-channel"):

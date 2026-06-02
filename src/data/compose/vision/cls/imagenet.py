@@ -101,3 +101,7 @@ class ImageNetDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
+
+    def predict_dataloader(self):
+        # Reuse validation dataloader for prediction.
+        return self.val_dataloader()

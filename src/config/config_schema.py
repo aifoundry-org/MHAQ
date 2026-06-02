@@ -43,13 +43,14 @@ class QuantizationConfig(BaseModel):
     name: str
     act_bit: int
     weight_bit: int
+    weight_guard_bit: Optional[int] = 8
+    act_guard_bit: Optional[int] = 0
     qmethod: QMethod = QMethod.GDNSQ
     qscheme: Optional[QScheme] = QScheme.PER_CHANNEL
     excluded_layers: Optional[List[str]] = None
     calibration: Optional[CalibrationConfig] = None
     freeze_batchnorm: Optional[bool] = False
     fuse_batchnorm: Optional[bool] = False
-    quantize_bias: Optional[bool] = False
     params: Optional[GDNSQQuantizerParams | Dict[str, Any]] = None
 
     @model_validator(mode="after")

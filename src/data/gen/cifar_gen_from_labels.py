@@ -82,7 +82,7 @@ def main():
     for name, module in model.named_modules():
         if isinstance(module, nn.BatchNorm2d):
             def bn_hook_fn(module, inp, out, key):
-                # assume bn_inputs[name] holds the pre‐norm tensor x for that layer
+                # assume bn_inputs[name] holds the pre-norm tensor x for that layer
                 mean_b = inp[0].mean(dim=[0,2,3])            # (C,)
                 var_b  = inp[0].var(dim=[0,2,3], unbiased=False)  # (C,)
 

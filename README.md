@@ -8,7 +8,7 @@ This repository provides a customizable and automated environment for developing
 
 - **Customizable Quantization:** The framework allows the definition and integration of custom quantization methods. It is designed to work seamlessly with pre-configured data pipelines.
 
-- **Ease of Use:** Built on PyTorch Lightning, providing a streamlined API that simplifies model management and training, while leveraging Lightning’s features for distributed training and logging.
+- **Ease of Use:** Built on PyTorch Lightning, providing a streamlined API that simplifies model management and training, while leveraging Lightning's features for distributed training and logging.
 
 - **Broad Model Support:** Designed to support models across multiple domains, including Computer Vision, Natural Language Processing, and Audio, with flexibility for different architectures.
 

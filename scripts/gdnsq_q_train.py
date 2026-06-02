@@ -1,6 +1,7 @@
 import os
 import sys
 import resource
+
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 import torch
@@ -25,10 +26,17 @@ def parse_args():
         required=False, 
         help="Path to the configuration file (YAML).",
         # default="config/gdnsq_config_yolo11.yaml"
-        # default="config/gdnsq_config_resnet20_old.yaml"
-        default="config/gdnsq_config_rfdn.yaml"
+        default="config/gdnsq_config_resnet20_cifar100_aewgs_w1a1.yaml"
+        # default="config/gdnsq_config_rfdn.yaml"
     )
     return parser.parse_args()
+
+
+def get_best_checkpoint_path(trainer):
+    checkpoint_callback = trainer.checkpoint_callback
+    if checkpoint_callback is None or not checkpoint_callback.best_model_path:
+        return "best"
+    return checkpoint_callback.best_model_path
 
 
 def main():
@@ -55,14 +63,23 @@ def main():
     logger.info("Calibrating model initial weights and scales")
     validator.calibrate(qmodel, datamodule=data)
 
-    # # Finetune model
+    logger.info(f"Model after calibration:\n{qmodel}")
+    # Finetune model
     trainer.fit(qmodel, datamodule=data)
 
-    idx = trainer.callbacks.index([cb for cb in trainer.callbacks if "ModelCheckpoint" in cb.__class__.__name__][0])
-    validator.callbacks[idx] = trainer.callbacks[idx]
-    validator.test(qmodel, datamodule=data, ckpt_path="best")
+    validator.test(qmodel, datamodule=data, ckpt_path=get_best_checkpoint_path(trainer))
 
-    validator.predict(qmodel, datamodule=data, ckpt_path="best")
+    if config.quantization.fuse_batchnorm:
+        logger.info("Performing batchnorm fuse")
+        n_fused_batchnorm = quantizer.fuse_conv_bn(qmodel)
+        logger.info(
+        "Fused %d BatchNorm layer(s) into previous NoisyConv2d and removed from graph.",
+        n_fused_batchnorm,
+        )
+        ckpt_path = validator.save_checkpoint()
+        validator.test(qmodel, datamodule=data, ckpt_path=ckpt_path)
+
+    validator.predict(qmodel, datamodule=data)
 
 if __name__ == "__main__":
     main()

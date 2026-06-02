@@ -106,14 +106,7 @@ class SrEvalLoop(_EvaluationLoop):
                 row_format = f"{{:^{max_length}}}" * len(table_headers)
                 half_term_size = int(term_size / 2)
 
-                try:
-                    # some terminals do not support this character
-                    if sys.stdout.encoding is not None:
-                        "─".encode(sys.stdout.encoding)
-                except UnicodeEncodeError:
-                    bar_character = "-"
-                else:
-                    bar_character = "─"
+                bar_character = "-"
                 bar = bar_character * term_size
 
                 lines = [bar, row_format.format(*table_headers).rstrip(), bar]

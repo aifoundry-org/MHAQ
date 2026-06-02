@@ -25,9 +25,6 @@ training:
     ReduceLrOnOutlier:
       params:
         reduce_scale: 8
-    RandNoiseScale:
-      params:
-        reduce_scale: 2
 
 data:
   dataset_name: CIFAR10

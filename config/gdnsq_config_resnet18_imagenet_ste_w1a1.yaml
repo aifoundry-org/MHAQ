@@ -53,7 +53,6 @@ quantization:
   weight_bit: 1
   freeze_batchnorm: False
   fuse_batchnorm: False
-  quantize_bias: False
   excluded_layers:
     - 'conv1'
     - 'fc'
